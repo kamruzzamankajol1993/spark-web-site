@@ -9,9 +9,7 @@ class MenuItem extends Model
 {
     use HasFactory;
 
-    
-     protected $fillable = [
-       'source_id',
+    protected $fillable = [
         'name',
         'route',
         'type', 

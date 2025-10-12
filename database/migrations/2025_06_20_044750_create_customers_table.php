@@ -13,15 +13,18 @@ return new class extends Migration
     {
         Schema::create('customers', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->nullable();
-            $table->string('address')->nullable();
-            $table->string('phone')->nullable();
-            $table->string('email')->nullable();
-            $table->string('status')->nullable();
-            $table->string('image')->nullable();
-            $table->string('admin_id')->nullable();
-            $table->string('nid_front_image')->nullable();
-            $table->string('nid_back_image')->nullable();
+            $table->string('name');
+            $table->string('email')->unique()->nullable();
+            $table->string('phone')->unique();
+            $table->string('password')->nullable();
+            $table->text('address')->nullable();
+            $table->integer('reward_points')->default(0);
+
+            $table->string('old_customer_id')->nullable();
+            $table->string('slug')->nullable();
+            $table->string('user_id')->nullable();
+            $table->string('type')->nullable();
+            $table->boolean('status')->default(true);
             $table->timestamps();
         });
     }

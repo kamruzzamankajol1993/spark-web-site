@@ -12,6 +12,7 @@ class SystemInformation extends Model
 
             'ins_name',
             'logo',
+            'white_logo',
             'branch_id',
             'designation_id',
             'keyword',
@@ -22,7 +23,7 @@ class SystemInformation extends Model
             'email',
             'phone',11,
             'main_url',
-            'admin_url',
+            'front_url',
             'tax',
             'charge',
             'usdollar',

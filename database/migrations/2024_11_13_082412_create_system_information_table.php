@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('ins_name')->nullable();
             $table->string('logo')->nullable();
+            $table->string('white_logo')->nullable();
             $table->string('branch_id')->nullable();
             $table->string('icon')->nullable();
             $table->string('address')->nullable();
@@ -23,6 +24,7 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->string('phone',11)->nullable();
             $table->string('main_url')->nullable();
+            $table->string('front_url')->nullable();
             $table->string('tax')->nullable();
             $table->string('develop_by')->nullable();
             $table->string('charge')->nullable();

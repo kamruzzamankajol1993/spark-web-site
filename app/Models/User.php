@@ -6,13 +6,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-// REMOVED: use Spatie\Permission\Traits\HasRoles;
-
+use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    // REMOVED: 'HasRoles' from this list
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -28,8 +26,6 @@ class User extends Authenticatable
         'is_shareholder',
         'status',
         'old_id',
-        'gender',
-        'dob',
         'phone',
         'address',
         'email',
@@ -37,8 +33,6 @@ class User extends Authenticatable
         'user_type',
         'password',
         'viewpassword',
-        'email_verified_at',
-        'remember_token',
     ];
 
     /**
@@ -65,12 +59,24 @@ class User extends Authenticatable
     }
 
     public function customer()
+{
+    return $this->belongsTo(Customer::class);
+}
+
+
+    /**
+     * Get the branch that the user belongs to.
+     */
+    public function branch()
     {
-        return $this->hasOne(Customer::class);
+        return $this->belongsTo(Branch::class);
     }
 
-    public function wishlist()
+    /**
+     * Get the designation of the user.
+     */
+    public function designation()
     {
-        return $this->hasMany(Wishlist::class);
+        return $this->belongsTo(Designation::class);
     }
 }

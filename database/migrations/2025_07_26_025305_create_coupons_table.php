@@ -13,14 +13,17 @@ return new class extends Migration
     {
         Schema::create('coupons', function (Blueprint $table) {
             $table->id();
-            $table->string('code')->unique(); // The unique coupon code (e.g., "SUMMER25")
-            $table->enum('discount_type', ['percentage', 'fixed'])->default('percentage'); // Type of discount: percentage or fixed amount
-            $table->decimal('discount_value', 8, 2); // The value of the discount
-            $table->timestamp('expires_at')->nullable(); // Optional expiration date for the coupon
-            $table->integer('usage_limit')->unsigned()->nullable(); // How many times the coupon can be used in total
-            $table->integer('usage_limit_per_user')->unsigned()->nullable(); // How many times a single user can use this coupon
-            $table->integer('times_used')->unsigned()->nullable(); // How many times the coupon has been used
-            $table->boolean('is_active')->default(true); // Status of the coupon
+             $table->string('code')->unique();
+            $table->enum('type', ['fixed', 'percent'])->default('fixed');
+            $table->decimal('value', 10, 2);
+            $table->decimal('min_amount', 10, 2)->nullable();
+            $table->enum('user_type', ['all', 'normal', 'platinum'])->default('all');
+            $table->json('product_ids')->nullable();
+            $table->json('category_ids')->nullable();
+            $table->integer('usage_limit')->nullable();
+            $table->integer('times_used')->default(0);
+            $table->date('expires_at')->nullable();
+            $table->boolean('status')->default(true);
             $table->timestamps();
         });
     }

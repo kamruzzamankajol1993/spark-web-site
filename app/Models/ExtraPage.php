@@ -11,6 +11,10 @@ class ExtraPage extends Model
     protected $fillable = [
          'privacy_policy',
          'term_condition',
-         'return_pollicy',
+         'return_policy', // Corrected typo
+         'warranty_policy',
+         'payment_term',
+         'delivery_policy',
+         'refund_policy',
     ];
 }

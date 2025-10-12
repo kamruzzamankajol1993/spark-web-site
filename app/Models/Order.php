@@ -20,7 +20,6 @@ class Order extends Model
         'total_pay',
         'due',
         'cod',
-        'currency',
         'old_id',
         'status',
         'shipping_address',

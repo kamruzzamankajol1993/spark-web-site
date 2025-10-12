@@ -1,58 +1,77 @@
 <?php
-
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Category extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'parent_id',
-        'name',
-        'slug',
-        'image',
-        'status',
+        'name', 'slug', 'description', 'image', 'status'
+        // REMOVED 'parent_id' from this array
     ];
 
-protected $guarded = ['id'];
-
-    // Automatically create a slug from the name
-    protected static function boot()
+    /**
+     * The parents that belong to the category.
+     * Renamed from parent() to parents()
+     */
+    public function parents(): BelongsToMany
     {
-        parent::boot();
-
-        static::creating(function ($category) {
-            if (empty($category->slug)) {
-                $category->slug = Str::slug($category->name);
-            }
-        });
-
-        static::updating(function ($category) {
-            if ($category->isDirty('name')) {
-                 $category->slug = Str::slug($category->name);
-            }
-        });
-    }
-
-     public function parent()
-    {
-        return $this->belongsTo(Category::class, 'parent_id');
+        return $this->belongsToMany(Category::class, 'category_parent', 'category_id', 'parent_id');
     }
 
     /**
-     * Get the child categories.
+     * The children that belong to the category.
      */
-    public function children()
+    public function children(): BelongsToMany
     {
-        return $this->hasMany(Category::class, 'parent_id');
+        return $this->belongsToMany(Category::class, 'category_parent', 'parent_id', 'category_id');
     }
 
-     public function subcategories()
+    public function attributes(): BelongsToMany
+{
+    // Use withPivot to access the 'is_required' AND 'group_name' columns
+    return $this->belongsToMany(Attribute::class, 'attribute_category')
+                ->withPivot('is_required', 'group_name'); // 👈 ADD 'group_name' HERE
+}
+
+    // 👇 ADD THE FOLLOWING TWO METHODS
+
+    /**
+     * Get all parent category IDs in a flat array.
+     */
+    public function getAllParentIds(): array
     {
-        return $this->hasMany(Subcategory::class);
+        $parentIds = [];
+        $parent = $this->parent;
+        while ($parent) {
+            $parentIds[] = $parent->id;
+            $parent = $parent->parent;
+        }
+        return $parentIds;
+    }
+
+    /**
+     * Get all descendant category IDs in a flat array.
+     */
+    public function getAllChildIds(): array
+    {
+        $childIds = [];
+        $children = $this->allChildren; // Uses the recursive relationship
+
+        $traverse = function ($categories) use (&$traverse, &$childIds) {
+            foreach ($categories as $category) {
+                $childIds[] = $category->id;
+                if ($category->allChildren->isNotEmpty()) {
+                    $traverse($category->allChildren);
+                }
+            }
+        };
+
+        $traverse($children);
+        return $childIds;
     }
 }

@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('bundle_offers', function (Blueprint $table) {
             $table->id();
             $table->string('name')->comment('e.g., Bundle Offer');
+            $table->string('slug')->unique()->comment('URL-friendly version of the name');
             $table->string('title')->comment('e.g., Summer T-Shirt Deal');
             $table->string('image')->nullable()->after('title');
             $table->string('startdate')->nullable()->after('image');
