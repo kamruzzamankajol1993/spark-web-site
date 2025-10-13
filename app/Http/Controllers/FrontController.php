@@ -22,6 +22,9 @@ use App\Models\HeroRightSlider;
 use App\Models\FooterBanner;
 use App\Models\ExtraCategory;
 use App\Models\AreaWisePrice; 
+use App\Models\HeroSection;
+use App\Models\FlashSale;
+use App\Models\HomePageDescription;
 class FrontController extends Controller
 {
 
@@ -389,124 +392,40 @@ public function ajaxDiscountFilter(Request $request)
     ]);
 }
 
-     public function index()
+  public function index()
 {
-    // --- START: NEW HERO SECTION LOGIC ---
-    // Fetch active left sliders, ordered by latest, with their linked item (product, category, etc.)
-    $heroLeftSliders = HeroLeftSlider::where('status', 1)->with('linkable')->latest()->get();
+    // Fetch the hero section data from the database
+    $heroSection = HeroSection::first();
 
-    // Fetch all active right sliders/banners with their linked items
-    $allRightSliders = HeroRightSlider::where('status', 1)->with('linkable')->get();
+      $featuredCategories = Category::where('status', 1)
+                                      ->where('is_featured', 1) // This gets only featured categories
+                                      ->get();
 
-    // Separate the right-side banners by their designated position
-    $heroTopBanner = $allRightSliders->where('position', 'top')->first();
-    // Assuming bottom banner positions are 'bottom_1' and 'bottom_2'
-    $heroBottomBanners = $allRightSliders->whereIn('position', ['bottom_left', 'bottom_right'])->take(2);
-    // --- END: NEW HERO SECTION LOGIC ---
+    // --- START: FLASH SALE LOGIC ---
+        // Find the currently active flash sale
+        $activeFlashSale = FlashSale::where('status', true)
+                                      ->where('start_date', '<=', now())
+                                      ->where('end_date', '>=', now())
+                                      ->orderBy('start_date', 'desc') // Get the most recent one if multiple are active
+                                      ->first();
 
-    // Fetch Featured Category (Trending/New/Discount) sections
-    $featuredCategorySettings = FeaturedCategory::pluck('value', 'key')->all();
-    $titles = ExtraCategory::where('status', 1)->pluck('name', 'slug');
-    
-    $topProductsType = $featuredCategorySettings['first_row_category'] ?? null;
-    $topProductsStatus = $featuredCategorySettings['first_row_status'] ?? false;
-    $products = collect();
-    $topRatedTitle = '';
-    if ($topProductsStatus && $topProductsType) {
-        $topRatedTitle = $titles[$topProductsType] ?? 'Top Rated Products';
-        $productIds = AssignCategory::where('category_name', $topProductsType)->pluck('product_id');
-        if ($productIds->isNotEmpty()) {
-            $products = Product::whereIn('id', $productIds)->where('status', 1)
-            ->with(['category', 'variants','assigns', 'productCategoryAssignment.category']) 
-            ->withCount('reviews')
-    ->withAvg('reviews', 'rating')->latest()->take(8)->get();
+        // Initialize an empty collection for products
+        $flashSaleProducts = collect();
+
+        // If an active sale is found, get its latest 8 products
+        if ($activeFlashSale) {
+            $flashSaleProducts = $activeFlashSale->products()
+            ->with('images') 
+                                               ->latest('flash_sale_product.created_at') // Order by when they were added to the sale
+                                               ->take(8)
+                                               ->get();
         }
-    }
-    
-    $secondRowType = $featuredCategorySettings['second_row_category'] ?? null;
-    $secondRowStatus = $featuredCategorySettings['second_row_status'] ?? false;
-    $secondRowProducts = collect();
-    $secondRowTitle = '';
-    if ($secondRowStatus && $secondRowType) {
-        $secondRowTitle = $titles[$secondRowType] ?? 'More For You';
-        $productIds = AssignCategory::where('category_name', $secondRowType)->pluck('product_id');
-        if ($productIds->isNotEmpty()) {
-            $secondRowProducts = Product::whereIn('id', $productIds)->where('status', 1)->with(['category', 'variants','assigns', 'productCategoryAssignment.category']) ->withCount('reviews')
-    ->withAvg('reviews', 'rating')->latest()->take(8)->get();
-        }
+        // --- END: FLASH SALE LOGIC ---
+    $homePageDescription = HomePageDescription::first();
+        // Pass the new variables to the view
+        return view('front.index', compact('heroSection', 'featuredCategories', 'activeFlashSale', 'flashSaleProducts', 'homePageDescription'));
     }
 
-    // Fetch Homepage Section (Category-based) data
-    // Fetch Homepage Section (Category-based) data
-$homepageRow1 = HomepageSection::with('category')->where('row_identifier', 'row_1')->where('status', 1)->first();
-$homepageRow2 = HomepageSection::with('category')->where('row_identifier', 'row_2')->where('status', 1)->first();
-
-$row1Products = collect();
-if ($homepageRow1 && $homepageRow1->category) {
-    // Get product IDs from the assignment table for the first row's category
-    $productIds = AssignCategory::where('category_id', $homepageRow1->category_id)->where('type','product_category')->pluck('product_id');
-    $row1Products = Product::whereIn('id', $productIds)
-        ->where('status', 1)
-        ->with('variants','assigns', 'productCategoryAssignment.category')
-         ->withCount('reviews')
-    ->withAvg('reviews', 'rating')
-        ->latest()
-        ->take(8)
-        ->get();
-}
-
-$row2Products = collect();
-if ($homepageRow2 && $homepageRow2->category) {
-    // Get product IDs from the assignment table for the second row's category
-    $productIds = AssignCategory::where('category_id', $homepageRow2->category_id)->where('type','product_category')->pluck('product_id');
-    $row2Products = Product::whereIn('id', $productIds)
-        ->where('status', 1)
-        ->with('variants','assigns', 'productCategoryAssignment.category')
-         ->withCount('reviews')
-    ->withAvg('reviews', 'rating')
-        ->latest()
-        ->take(8)
-        ->get();
-}
-
-// Manually load categories for all fetched homepage products for efficiency
-$allHomepageProducts = $row1Products->merge($row2Products);
-$productIdsOnPage = $allHomepageProducts->pluck('id')->unique();
-
-if ($productIdsOnPage->isNotEmpty()) {
-    $assignments = AssignCategory::whereIn('product_id', $productIdsOnPage)->get()->keyBy('product_id');
-    $categoryIds = $assignments->pluck('category_id')->unique();
-    $categories = Category::whereIn('id', $categoryIds)->get()->keyBy('id');
-
-    // This loop attaches the correct category to each product object,
-    // which updates the products within both $row1Products and $row2Products collections.
-    foreach ($allHomepageProducts as $product) {
-        $assignment = $assignments->get($product->id);
-        if ($assignment) {
-            $category = $categories->get($assignment->category_id);
-            if ($category) {
-                // This ensures your view can still use `$product->category`
-                $product->setRelation('category', $category);
-            }
-        }
-    }
-}
-// --- END: UPDATED HOMEPAGE SECTION LOGIC ---
-
-    // Fetch other necessary data for the homepage
-    $featuredCategories = AnimationCategory::where('status', 1)->take(5)->get();
-    $offerDeals = BundleOfferProduct::where('bundle_offer_id', 1)->get();
-    $allProductIds = $offerDeals->pluck('product_id')->flatten()->unique()->all();
-    $productsbun = Product::whereIn('id', $allProductIds)->get()->keyBy('id');
-$footerBanner = FooterBanner::latest()->first();
-    // Pass all data, including the new hero variables, to the view
-    return view('front.index', compact(
-        'productsbun', 'offerDeals', 'featuredCategories',
-        'products', 'topRatedTitle', 'secondRowProducts', 'secondRowTitle',
-        'homepageRow1', 'row1Products', 'homepageRow2', 'row2Products','footerBanner',
-        'heroLeftSliders', 'heroTopBanner', 'heroBottomBanners' // <-- New variables for the hero section
-    ));
-}
 
 
     

@@ -4,101 +4,50 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
-use App\Models\Setting;
-use App\Models\MenuItem;
-use App\Models\SidebarMenu;
 use App\Models\Category;
-use App\Models\OffersectionSetting;
-use App\Models\BundleOfferProduct;
-use App\Models\Product;  
-use Carbon\Carbon;
+use App\Models\FrontendControl; // Make sure this is imported
 
 class ViewServiceProvider extends ServiceProvider
 {
+    /**
+     * Bootstrap any application services.
+     *
+     * @return void
+     */
     public function boot(): void
     {
-        // This composer shares data with all views in the 'front' directory.
-        View::composer('front.*', function ($view) {
-            // Fetch Header Settings
-            $settings = Setting::pluck('value', 'key');
-            $headerColor = $settings['header_color'] ?? '#FFFFFF';
-            $menuLimit = $settings['menu_limit'] ?? 8; // Default to 8 if not set
+        try {
+            // 1. Fetch the saved settings from the database
+            $frontendSettings = FrontendControl::first();
 
-            // Fetch Menu Items
-            $menuItems = MenuItem::where('is_visible', true)
-                                 ->orderBy('order')
-                                 ->limit($menuLimit)
-                                 ->get();
-            
-            // Pass all variables to the view
-            $view->with('headerColor', $headerColor);
-            $view->with('menuItems', $menuItems);
-        });
+            // 2. Get the saved category IDs, defaulting to an empty array if no settings exist
+            $headerCategoryIds = $frontendSettings->header_category_ids ?? [];
+            $sidebarCategoryIds = $frontendSettings->sidebar_category_ids ?? [];
 
-        // NEW: Composer specifically for the sidebar menu
-        View::composer('front.*', function ($view) {
-            // Get the ordered list of categories from your sidebar control table
-            $sidebarMenuItemNames = SidebarMenu::where('is_visible', true)
-                                              ->orderBy('order')
-                                              ->pluck('name');
+            // 3. Fetch only the categories selected for the header, preserving the saved order
+            $headerCategories = collect($headerCategoryIds)->map(function ($id) {
+                return Category::with([
+                    'children' => fn($q) => $q->where('status', 1),
+                    'children.children' => fn($q) => $q->where('status', 1)
+                ])->find($id);
+            })->filter(); // filter() removes any null values if a category was deleted
 
-            // Fetch the actual Category models with their subcategories,
-            // ordered according to your admin panel settings.
-            $sidebarCategories = Category::whereIn('name', $sidebarMenuItemNames)
-                                         ->with(['subcategories' => function ($query) {
-                                             $query->where('status', 1);
-                                         }])
-                                         ->get()
-                                         ->sortBy(function($model) use ($sidebarMenuItemNames){
-                                             return array_search($model->name, $sidebarMenuItemNames->toArray());
-                                         });
+            // 4. Fetch only the categories selected for the sidebar, preserving the saved order
+            $sidebarCategories = collect($sidebarCategoryIds)->map(function ($id) {
+                return Category::with([
+                    'children' => fn($q) => $q->where('status', 1),
+                    'children.children' => fn($q) => $q->where('status', 1)
+                ])->find($id);
+            })->filter();
 
-            $view->with('sidebarCategories', $sidebarCategories);
-        });
+            // 5. Share both variables globally with all Blade views
+            View::share('headerCategories', $headerCategories);
+            View::share('sidebarCategories', $sidebarCategories);
 
-        View::composer('front.*', function ($view) {
-            $timezone = 'Asia/Dhaka';
-            $now = Carbon::now($timezone);
-
-            // MODIFIED QUERY: Only load the 'bundleOffer' if its 'enddate' is in the future.
-            $offerSectionSetting = OffersectionSetting::with(['bundleOffer' => function ($query) use ($now) {
-                $query->where('status', 1)->where('enddate', '>=', $now);
-            }])->first();
-            
-            $offerDealsGlobal = collect();
-            $products = collect();
-            $remaining = ['days' => 0, 'hours' => 0, 'minutes' => 0, 'seconds' => 0];
-            $dealEndDateISO = null;
-
-            // This condition now automatically handles expired offers,
-            // because $offerSectionSetting->bundleOffer will be null if the date has passed.
-            if ($offerSectionSetting && $offerSectionSetting->bundleOffer) {
-                $offerDealsGlobal = BundleOfferProduct::where('bundle_offer_id', $offerSectionSetting->bundleOffer->id)->get();
-                $allProductIds = $offerDealsGlobal->pluck('product_id')->flatten()->unique()->all();
-                $products = Product::whereIn('id', $allProductIds)->get()->keyBy('id');
-
-                // --- Timer & Date Logic ---
-                $sellEndDateObject = Carbon::parse($offerSectionSetting->bundleOffer->enddate, $timezone)->endOfDay();
-
-                if ($now->lt($sellEndDateObject)) {
-                    $diff = $now->diff($sellEndDateObject);
-                    $remaining = [
-                        'days' => $diff->d,
-                        'hours' => $diff->h,
-                        'minutes' => $diff->i,
-                        'seconds' => $diff->s
-                    ];
-                }
-    
-                $dealEndDateISO = $sellEndDateObject->toIso8601String();
-                // --- Timer Logic End ---
-            }
-            
-            $view->with('dealEndDateISO', $dealEndDateISO);
-            $view->with('remaining', $remaining);
-            $view->with('offerSectionSetting', $offerSectionSetting);
-            $view->with('offerDealsGlobal', $offerDealsGlobal);
-            $view->with('offerProducts', $products);
-        });
+        } catch (\Exception $e) {
+            // Failsafe in case the database isn't ready (e.g., during migrations)
+            View::share('headerCategories', collect());
+            View::share('sidebarCategories', collect());
+        }
     }
 }

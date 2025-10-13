@@ -19,4 +19,13 @@ class HeroSection extends Model
         'top_right_image',
         'bottom_right_image',
     ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'left_image' => 'array',
+    ];
 }

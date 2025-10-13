@@ -10,7 +10,7 @@ use App\Models\SystemInformation;
 use App\Models\SocialLink;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Pagination\Paginator;
-use App\Models\Support;
+use App\Models\ExtraPage;
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -39,14 +39,15 @@ class AppServiceProvider extends ServiceProvider
         view()->composer('*', function ($view)
         {
 
- $supportInfo = Support::latest()->first();
-            view()->share('supportInfo', $supportInfo);
+ 
             //global social link code start
 //global social link code start
             $socialLinks = SocialLink::all();
+
+           // dd($socialLinks);
             view()->share('socialLinks', $socialLinks);
-           
-            
+            $extraPages = ExtraPage::first();
+            view()->share('extraPages', $extraPages);
 
             //provider code for frontend
 

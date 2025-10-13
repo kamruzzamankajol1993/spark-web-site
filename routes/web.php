@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\CheckoutController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\CompareController;
+use App\Http\Controllers\Front\PageController;
 
 Route::get('/clear', function() {
     \Illuminate\Support\Facades\Artisan::call('cache:clear');
@@ -18,7 +19,7 @@ Route::get('/clear', function() {
     \Illuminate\Support\Facades\Artisan::call('route:clear');
     return redirect()->back();
 });
-
+Route::get('/page/{slug}', [PageController::class, 'show'])->name('page.show');
 Route::controller(CheckoutController::class)->group(function () {
    // --- ADDED: SSLCOMMERZ PAYMENT GATEWAY ROUTES ---
          Route::post('/pay', 'pay')->name('pay');
