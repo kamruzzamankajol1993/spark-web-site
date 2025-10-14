@@ -83,6 +83,7 @@
                                         {{ $category->name }} <i class="fa-solid fa-caret-down"></i>
                                     </a>
                                     <ul class="dropdown-menu dropdown-menu-custom">
+                                               <li><a class="dropdown-item" href="{{ route('category.show', $category->slug) }}">{{ $category->name }}</a></li>
                                         @foreach($category->children as $child)
                                             @if($child->children->isEmpty())
                                                 <li><a class="dropdown-item" href="{{ route('category.show', $child->slug) }}">{{ $child->name }}</a></li>

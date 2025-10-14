@@ -22,7 +22,10 @@ class Category extends Model
     {
         return $this->belongsToMany(Category::class, 'category_parent', 'category_id', 'parent_id');
     }
-
+public function products()
+    {
+        return $this->hasMany(Product::class);
+    }
     /**
      * The children that belong to the category.
      */
