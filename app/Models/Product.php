@@ -67,7 +67,10 @@ class Product extends Model
     {
         return $this->belongsTo(Brand::class);
     }
-
+ public function reviews()
+    {
+        return $this->hasMany(ProductReview::class);
+    }
     public function flashSales()
 {
     return $this->belongsToMany(FlashSale::class, 'flash_sale_product')

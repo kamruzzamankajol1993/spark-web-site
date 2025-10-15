@@ -278,9 +278,24 @@ $cleanPhoneNumber = trim($phone);
      */
     public function logout(Request $request)
     {
+        // 1. Store the data you want to keep in temporary variables
+        $cart = session('cart', []);
+        $compareList = session('compare_list', []);
+
+        // 2. Perform the standard, secure logout procedure
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        // 3. Restore the saved data into the new, fresh session
+        if (!empty($cart)) {
+            session(['cart' => $cart]);
+        }
+        if (!empty($compareList)) {
+            session(['compare_list' => $compareList]);
+        }
+        
+        // 4. Redirect the user
         return redirect('/');
     }
 

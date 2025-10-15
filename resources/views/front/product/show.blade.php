@@ -1,550 +1,352 @@
 @extends('front.master.master')
 
 @section('title')
-{{ $product->name }}
+    {{ $product->name }}
 @endsection
+
 @section('css')
-<style>
-   
-#realImageModal .modal-body {
-    padding: 0.5rem; /* Add some padding around the slider */
-}
-
-.real-image-slider .slick-slide img {
-    width: 100%;
-    max-height: 75vh; /* Ensure image is not taller than the screen */
-    object-fit: contain; /* Show the full image without cropping */
-    margin: auto;
-}
-
-/* Slick slider arrow customization for the modal */
-.real-image-slider .slick-prev,
-.real-image-slider .slick-next {
-    z-index: 10;
-    width: 40px;
-    height: 40px;
-}
-.real-image-slider .slick-prev { left: 25px; }
-.real-image-slider .slick-next { right: 25px; }
-
-.real-image-slider .slick-prev:before,
-.real-image-slider .slick-next:before {
-    font-size: 30px;
-    opacity: .75;
-    color: #333;
-}
-    #customer-reviews-section {
-    position: relative;
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed; /* Optional: Creates a cool parallax scrolling effect */
-    z-index: 1;
-}
-
-#customer-reviews-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(255, 255, 255, 0.92); /* White overlay with 92% opacity */
-    z-index: -1; /* Places the overlay behind the content */
-}
-    /* Style for color swatches */
-    .color-option {
-        width: 35px;
-        height: 35px;
-        border-radius: 50%;
-        cursor: pointer;
-        border: 2px solid #ddd;
-        transition: transform 0.2s, border-color 0.2s;
-        display: inline-block;
-    }
-    .color-option.active {
-        border-color: #000;
-        transform: scale(1.15);
-        box-shadow: 0 0 8px rgba(0,0,0,0.3);
-    }
-    /* Style for size buttons */
-    .size-option.active {
-        background-color: #212529 !important;
-        color: #fff !important;
-        border-color: #212529 !important;
-    }
-    .size-option:disabled {
-        cursor: not-allowed;
-        opacity: 0.5;
-        text-decoration: line-through;
-    }
-     .star-rating .bi-star-fill { color: #ffc107; }
-    .review-images-container img { width: 70px; height: 70px; object-fit: cover; border-radius: 5px; cursor: pointer; }
-</style>
 @endsection
+
 @section('body')
+<main class="spark_container">
+    <div class="spark_product_details_container">
+        <div class="row g-2">
+            <div class="col-lg-12">
+                <nav class="spark_product_page_breadcrumbs" aria-label="breadcrumb">
+                    <ol class="breadcrumb bg-transparent p-0">
+                        <li class="breadcrumb-item">
+                            <a href="{{ route('home.index') }}" class="text-decoration-none text-secondary">Home</a>
+                        </li>
+                        @if($product->category && $product->category->parent)
+                        <li class="breadcrumb-item">
+                            <a href="{{ route('category.show', $product->category->parent->slug) }}" class="text-decoration-none text-secondary">{{ $product->category->parent->name }}</a>
+                        </li>
+                        @endif
+                        @if($product->category)
+                        <li class="breadcrumb-item">
+                            <a href="{{ route('category.show', $product->category->slug) }}" class="text-decoration-none text-secondary">{{ $product->category->name }}</a>
+                        </li>
+                        @endif
+                        <li class="breadcrumb-item active" aria-current="page">{{ \Illuminate\Support\Str::limit($product->name, 50) }}</li>
+                    </ol>
+                </nav>
+            </div>
+            <div class="col-lg-2 col-md-3 featured_card_hidden">
+                <div class="card p-3 shadow-sm spark_details_features_card">
+                    <div class="spark_details_features_header">
+                        Related Products
+                    </div>
+                    <ul class="spark_details_features_product-list">
+                        @forelse($relatedProducts as $relatedProduct)
+                        <li class="spark_details_features_product-item">
+                            <a href="{{ route('product.show', $relatedProduct->slug) }}" class="spark_details_features_product-link">
+                                <div class="spark_details_features_img-container">
+                                    <img src="{{ $relatedProduct->images->isNotEmpty() ? $front_ins_url . 'public/' . $relatedProduct->images->first()->image_path : 'https://placehold.co/70x70?text=N/A' }}"
+                                         alt="{{ $relatedProduct->name }}" class="spark_details_features_img">
+                                </div>
+                                <div class="spark_details_features_details">
+                                    <div class="spark_details_features_title">
+                                        {{ \Illuminate\Support\Str::limit($relatedProduct->name, 60) }}
+                                    </div>
+                                    <div class="d-flex flex-wrap align-items-baseline">
+                                        @if($relatedProduct->offer_price > 0 && $relatedProduct->offer_price < $relatedProduct->selling_price)
+                                            <span class="spark_details_features_price">৳ {{ number_format($relatedProduct->offer_price) }}</span>
+                                            <span class="spark_details_features_old-price">৳ {{ number_format($relatedProduct->selling_price) }}</span>
+                                        @else
+                                            <span class="spark_details_features_price">৳ {{ number_format($relatedProduct->selling_price) }}</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            </a>
+                        </li>
+                        @empty
+                        <li class="spark_details_features_product-item text-muted" style="font-size: 0.8rem;">No related products found.</li>
+                        @endforelse
+                    </ul>
+                </div>
+            </div>
+            <div class="col-lg-10 col-md-9 col-12">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="spark_product_details_main-card position-relative">
+                            @php
+                                $hasOffer = $product->offer_price > 0 && $product->offer_price < $product->selling_price;
+                                $discountAmount = $hasOffer ? $product->selling_price - $product->offer_price : 0;
+                            @endphp
 
+                            @if($discountAmount > 0)
+                            <span class="spark_product_details_save-badge">Save: ৳ {{ number_format($discountAmount) }}</span>
+                            @endif
+
+                            <div class="row">
+                                <div class="col-md-5 d-flex flex-column align-items-center">
+                                    <div class="spark_product_details_main-img-container text-center w-100"
+                                         data-bs-toggle="modal" data-bs-target="#imageGalleryModal"
+                                         id="mainImageClick">
+                                        <img src="{{ $product->images->isNotEmpty() ? $front_ins_url . 'public/' . $product->images->first()->image_path : 'https://placehold.co/400x400?text=N/A' }}"
+                                             alt="{{ $product->name }}" class="spark_product_details_main-img"
+                                             id="mainImage">
+                                    </div>
+
+                                    @if($product->images->count() > 1)
+                                    <div class="d-flex justify-content-center gap-2 mb-4 w-100">
+                                        @foreach($product->images as $index => $image)
+                                        <img src="{{ $front_ins_url . 'public/' . $image->image_path }}"
+                                             data-image="{{ $front_ins_url . 'public/' . $image->image_path }}"
+                                             alt="Thumbnail {{ $index + 1 }}" class="spark_product_details_thumb {{ $index == 0 ? 'active' : '' }}"
+                                             onclick="switchImage(this, {{ $index }})">
+                                        @endforeach
+                                    </div>
+                                    @endif
+                                </div>
+
+                                <div class="col-md-7">
+                                    <h2 class="spark_product_details_title">{{ $product->name }}</h2>
+
+                                    <div class="mb-3">
+                                        <span class="spark_product_details_info-badge">Stock :
+                                            @if($product->stock && $product->stock->quantity > 0)
+                                                <span class="text-success">In Stock</span>
+                                            @else
+                                                <span class="text-danger">Out of Stock</span>
+                                            @endif
+                                        </span>
+                                        <span class="spark_product_details_info-badge">PID : {{ $product->id }}</span>
+                                        @if($product->sku)
+                                        <span class="spark_product_details_info-badge">SKU : {{ $product->sku }}</span>
+                                        @endif
+                                        @if($product->brand)
+                                        <span class="spark_product_details_info-badge">Brand : {{ $product->brand->name }}</span>
+                                        @endif
+                                        {{-- Static content for Model and Warranty as no dynamic field exists --}}
+                                        <span class="spark_product_details_info-badge">Model : ExpertBook B1</span>
+                                        <span class="spark_product_details_info-badge">Warranty : 3 Years</span>
+                                    </div>
+
+                                    <div class="mb-3 d-flex align-items-center">
+                                        <div class="text-warning me-2" style="font-size: 0.9rem;">
+                                            @php $rating = round($product->reviews_avg_rating ?? 0); @endphp
+                                            @for ($i = 1; $i <= 5; $i++)
+                                                @if ($i <= $rating)
+                                                    <i class="fas fa-star"></i>
+                                                @else
+                                                    <i class="far fa-star"></i>
+                                                @endif
+                                            @endfor
+                                        </div>
+                                        <small class="text-muted">({{ $product->reviews_count }} Reviews)</small>
+                                    </div>
+
+                                    @if($product->short_description)
+                                    <div class="spark_product_details_feature-list">
+                                        {!! $product->short_description !!}
+                                    </div>
+                                    @endif
+
+                                    <div class="row g-3 mb-4">
+                                        <div class="col-md-6">
+                                            <div class="spark_product_details_price-box h-100">
+                                                <div class="spark_product_details_price-title">{{ $hasOffer ? 'Discount Price' : 'Regular Price' }}</div>
+                                                @if($hasOffer)
+                                                    <span class="spark_product_details_current-price">৳ {{ number_format($product->offer_price) }}</span>
+                                                    <span class="spark_product_details_old-price ms-2">৳ {{ number_format($product->selling_price) }}</span>
+                                                @else
+                                                    <span class="spark_product_details_current-price">৳ {{ number_format($product->selling_price) }}</span>
+                                                @endif
+                                                <a href="#" class="spark_product_details_emi-link d-block mt-1"><i class="fas fa-plus me-1"></i> Available Payment Method</a>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="spark_product_details_price-box h-100">
+                                                <div class="spark_product_details_emi-text">EMI Start From*</div>
+                                                <div class="spark_product_details_emi-price">৳ {{ number_format($product->selling_price / 12, 2) }}</div>
+                                                <a href="#" class="spark_product_details_emi-link d-block mt-1"><i class="fas fa-eye me-1"></i> View Banks EMI Plans</a>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {{-- This form structure allows the global script in master.blade.php to handle the AJAX request --}}
+<form class="add-to-cart-form">
+    @csrf
+    <input type="hidden" name="product_id" value="{{ $product->id }}">
+    <div class="d-flex flex-wrap align-items-center mb-4 gap-2">
+        <div class="input-group w-auto">
+            <button class="btn btn-outline-secondary" type="button" onclick="changeQuantity(-1)">-</button>
+            {{-- Added name="quantity" so it can be submitted with the form --}}
+            <input type="text" class="form-control text-center spark_product_details_qty-input" value="1" id="quantityInput" name="quantity">
+            <button class="btn btn-outline-secondary" type="button" onclick="changeQuantity(1)">+</button>
+        </div>
+        {{-- The button is now type="submit" to trigger the form submission --}}
+        <button type="submit" class="btn spark_product_details_cart-btn flex-grow-1">
+             <span class="button-text">Add to Cart</span>
+             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+        </button>
+        
+        {{-- These buttons remain outside the form's control --}}
+                {{-- UPDATED "BUY NOW" BUTTON --}}
+        <button type="button" id="buy-now-btn" class="btn spark_product_details_buy-btn">
+            <span class="button-text">Buy Now</span>
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+        </button>
+
+       <button class="btn spark_product_details_heart-btn wishlist-btn" type="button" data-product-id="{{ $product->id }}">
+    <span class="button-text">
+        <i class="fa-heart {{ (isset($wishlistProductIds) && in_array($product->id, $wishlistProductIds)) ? 'fas' : 'far' }}"></i>
+    </span>
+    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+</button>
+<button class="btn spark_product_details_compare-btn compare-btn" type="button" data-product-id="{{ $product->id }}">
+    <span class="button-text">
+        <i class="fas fa-exchange-alt"></i>
+    </span>
+    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+</button>
+
+    </div>
+</form>
+
+                                    <div class="row g-2">
+                                        <div class="col-md-6"><a href="#" class="spark_product_details_bottom-link">Product Disclaimer <i class="fas fa-chevron-right"></i></a></div>
+                                        <div class="col-md-6"><a href="#" class="spark_product_details_bottom-link">Any Suggestions? <i class="fas fa-chevron-right"></i></a></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="spark_product_details_tabs">
+                            <ul class="nav nav-tabs" id="productTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="description-tab" data-bs-toggle="tab" data-bs-target="#description" type="button" role="tab" aria-controls="description" aria-selected="true">Description</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="specification-tab" data-bs-toggle="tab" data-bs-target="#specification" type="button" role="tab" aria-controls="specification" aria-selected="false">Specification</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews" type="button" role="tab" aria-controls="reviews" aria-selected="false">Reviews ({{ $product->reviews_count }})</button>
+                                </li>
+                            </ul>
+                            <div class="tab-content spark_product_details_tab-content" id="productTabContent">
+                                <div class="tab-pane fade show active" id="description" role="tabpanel" aria-labelledby="description-tab">
+                                    {!! $product->description !!}
+                                </div>
+                                <div class="tab-pane fade" id="specification" role="tabpanel" aria-labelledby="specification-tab">
+                                    @if($product->attributeValues->isNotEmpty())
+                                    <table class="table table-bordered product_page_table">
+                                        <tr><td colspan="2" class="table_header_title">Basic Information</td></tr>
+                                        @foreach($product->attributeValues as $attributeValue)
+                                            <tr>
+                                                <td>{{ $attributeValue->attribute->name }}</td>
+                                                <td>{{ $attributeValue->value }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </table>
+                                    @else
+                                    <p class="text-muted p-3">No specification details available for this product.</p>
+                                    @endif
+                                </div>
+                                <div class="tab-pane fade" id="reviews" role="tabpanel" aria-labelledby="reviews-tab">
+                                    @forelse($product->reviews as $review)
+                                    <div class="border-bottom pb-3 mb-3">
+                                        <strong>{{ $review->user->name ?? 'Anonymous' }}</strong>
+                                        <div class="text-warning my-1" style="font-size: 0.8rem;">
+                                            @for ($i = 1; $i <= 5; $i++)
+                                                <i class="{{ $i <= $review->rating ? 'fas' : 'far' }} fa-star"></i>
+                                            @endfor
+                                        </div>
+                                        <p class="mb-0" style="font-size: 0.9rem;">{{ $review->description }}</p>
+                                        <small class="text-muted">{{ $review->created_at->format('d M Y') }}</small>
+                                    </div>
+                                    @empty
+                                    <p class="text-muted p-3">No reviews yet. Be the first to review this product!</p>
+                                    @endforelse
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div class="modal fade" id="imageGalleryModal" tabindex="-1" aria-labelledby="imageGalleryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="imageCarousel" class="carousel slide w-100">
+                    <div class="carousel-inner" id="carouselInner"></div>
+                    <button class="carousel-control-prev spark_product_details_carousel-control" type="button" data-bs-target="#imageCarousel" data-bs-slide="prev">
+                        <i class="fas fa-chevron-left"></i><span class="visually-hidden">Previous</span>
+                    </button>
+                    <button class="carousel-control-next spark_product_details_carousel-control" type="button" data-bs-target="#imageCarousel" data-bs-slide="next">
+                        <i class="fas fa-chevron-right"></i><span class="visually-hidden">Next</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
+
 @section('script')
 <script>
-$(document).ready(function() {
+    // Make product images available to JavaScript
+    const productImages = @json($product->images->map(function($image, $front_ins_url) {
+        return $front_ins_url . 'public/' . $image->image_path;
+    }));
+    let currentImageIndex = 0;
 
-    // --- Real Image Modal Slider Initialization ---
-const realImageModal = document.getElementById('realImageModal');
-if (realImageModal) {
-    realImageModal.addEventListener('shown.bs.modal', function () {
-        const slider = $('#real-image-slider');
-        
-        // Initialize slider only if it hasn't been initialized before
-        if (!slider.hasClass('slick-initialized')) {
-            slider.slick({
-                dots: true,
-                infinite: true,
-                speed: 300,
-                slidesToShow: 1,
-                adaptiveHeight: true,
-                arrows: true
-            });
-        }
-    });
-}
-
-    // --- Real-Time "People Watching" Counter ---
-    const watchingContainer = $('.d-flex[data-product-id]');
-    const watchingCountElement = $('#watching-count');
-
-    if (watchingContainer.length && watchingCountElement.length) {
-        const productId = watchingContainer.data('product-id');
-        
-        // Create a URL template using the named route and a placeholder
-        const urlTemplate = "{{ route('product.view_count', ['id' => ':id']) }}";
-
-        // Set an interval to check for new counts every 8 seconds
-        setInterval(function() {
-            // Replace the placeholder with the actual product ID for each request
-            const finalUrl = urlTemplate.replace(':id', productId);
-
-            $.ajax({
-                url: finalUrl, // Use the generated URL
-                type: 'GET',
-                success: function(response) {
-                    if (response.success) {
-                        watchingCountElement.text(response.view_count);
-                    }
-                },
-                error: function() {
-                    console.log('Could not fetch new view count.');
-                }
-            });
-        }, 8000); // Check every 8 seconds
+    function switchImage(thumbnail, index) {
+        document.getElementById('mainImage').src = thumbnail.src;
+        currentImageIndex = index;
+        document.querySelectorAll('.spark_product_details_thumb').forEach(t => t.classList.remove('active'));
+        thumbnail.classList.add('active');
     }
-    // --- Configuration ---
-    const BASE_PRODUCT_PRICE = {{ $product->discount_price ?? $product->base_price }};
-    const IMAGE_BASE_URL = "{{ $front_ins_url . 'public/uploads/' }}";
-    let selectedVariantId = null;
-    let selectedSize = null;
-    let currentStock = 0;
+
+    const imageGalleryModalEl = document.getElementById('imageGalleryModal');
+
+    document.getElementById('mainImageClick').addEventListener('click', function() {
+        const carouselInner = document.getElementById('carouselInner');
+        carouselInner.innerHTML = '';
+
+        productImages.forEach((imageSrc, index) => {
+            const carouselItem = document.createElement('div');
+            carouselItem.className = `carousel-item ${index === currentImageIndex ? 'active' : ''}`;
+            const img = document.createElement('img');
+            img.src = imageSrc;
+            img.className = 'd-block w-100';
+            img.alt = `Product View ${index + 1}`;
+            carouselItem.appendChild(img);
+            carouselInner.appendChild(carouselItem);
+        });
+
+        const carousel = new bootstrap.Carousel(document.getElementById('imageCarousel'), { interval: false });
+        carousel.to(currentImageIndex);
+        const modal = new bootstrap.Modal(imageGalleryModalEl);
+        modal.show();
+    });
     
-    // --- Slick Slider Initialization ---
-    function initializeSlick() {
-        // Destroy existing sliders if they exist
-        if ($('#main-product-slider').hasClass('slick-initialized')) {
-            $('#main-product-slider').slick('unslick');
+    // Quantity changer function
+    function changeQuantity(amount) {
+        const quantityInput = document.getElementById('quantityInput');
+        let currentValue = parseInt(quantityInput.value, 10);
+        currentValue += amount;
+        if (currentValue < 1) {
+            currentValue = 1;
         }
-        if ($('#thumbnail-nav-slider').hasClass('slick-initialized')) {
-            $('#thumbnail-nav-slider').slick('unslick');
-        }
-
-        $('#main-product-slider').slick({
-            slidesToShow: 1,
-            slidesToScroll: 1,
-            arrows: false,
-            fade: true,
-            asNavFor: '#thumbnail-nav-slider'
-        });
-
-        $('#thumbnail-nav-slider').slick({
-            slidesToShow: 3,
-            slidesToScroll: 1,
-            vertical: true,
-            asNavFor: '#main-product-slider',
-            dots: false,
-            arrows: false,
-            focusOnSelect: true,
-            responsive: [{
-                breakpoint: 768,
-                settings: {
-                    slidesToShow: 4,
-                    vertical: false
-                }
-            }]
-        });
+        quantityInput.value = currentValue;
     }
 
-    // Custom arrow functionality
-    $('.prev-arrow').click(() => $('#thumbnail-nav-slider').slick('slickPrev'));
-    $('.next-arrow').click(() => $('#thumbnail-nav-slider').slick('slickNext'));
-
-    // --- Core Logic Functions ---
-    function updateSizes(sizes) {
-        const container = $('#size-options-container');
-        container.empty(); // Clear old sizes
-        $('#selected-size-name').text('Select a size');
-        selectedSize = null;
-        currentStock = 0;
-
-        if (sizes && sizes.length > 0) {
-            sizes.forEach(size => {
-                const button = $('<button></button>')
-                    .addClass('btn btn-outline-secondary rounded-3 size-option')
-                    .text(size.name)
-                    .data('size-name', size.name)
-                    .data('stock', size.quantity);
-                
-                if (size.quantity <= 0) {
-                    button.prop('disabled', true);
-                }
-                container.append(button);
-            });
-        } else {
-            container.html('<p class="text-danger small">This color is currently out of stock.</p>');
-        }
-    }
-
-    function updateImages(mainImages, thumbImages) {
-        const mainSlider = $('#main-product-slider');
-        const thumbSlider = $('#thumbnail-nav-slider');
-        
-        mainSlider.empty();
-        thumbSlider.empty();
-
-        mainImages.forEach(img => {
-            mainSlider.append(`<div><img src="${IMAGE_BASE_URL}${img}" class="img-fluid rounded-3"></div>`);
-        });
-
-        thumbImages.forEach(img => {
-            thumbSlider.append(`<div><img src="${IMAGE_BASE_URL}${img}" class="img-fluid rounded-3 thumbnail-image"></div>`);
-        });
-
-        initializeSlick();
-    }
-    
-    function updatePrice(additionalPrice) {
-        const finalPrice = BASE_PRODUCT_PRICE + parseFloat(additionalPrice || 0);
-        $('#product-price').text(`৳ ${finalPrice.toFixed(2)}`);
-    }
-
-    // --- Event Handlers ---
-    $('.color-option').on('click', function() {
-        const $this = $(this);
-
-        // Update active state
-        $('.color-option').removeClass('active');
-        $this.addClass('active');
-
-        // Extract data
-        const variantData = $this.data();
-        selectedVariantId = variantData.variantId;
-        
-        // Update UI
-        $('#selected-color-name').text(variantData.colorName);
-        $('#product-sku').text(variantData.variantSku || '{{ $product->product_code }}');
-        updateSizes(variantData.sizes);
-        updatePrice(variantData.additionalPrice);
-        updateImages(variantData.mainImages, variantData.thumbImages);
-        $('#quantity-value').text(1);
+    // Modal cleanup fix
+    imageGalleryModalEl.addEventListener('hidden.bs.modal', function () {
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
     });
-
-    $('#size-options-container').on('click', '.size-option:not(:disabled)', function() {
-        const $this = $(this);
-        $('#size-options-container .size-option').removeClass('active');
-        $this.addClass('active');
-        selectedSize = $this.data('size-name');
-         currentStock = $this.data('stock');
-        $('#selected-size-name').text(selectedSize);
-        $('#quantity-value').text(1);
-    });
-
-    $('#quantity-plus').on('click', () => {
-    // First, check if a size has been selected at all
-    if (!selectedSize) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Select a Size',
-            text: 'Please select a size first.'
-        });
-        return;
-    }
-
-    let qty = parseInt($('#quantity-value').text());
-
-    // Now, check if the quantity is already at the stock limit
-    if (qty >= currentStock) {
-        Swal.fire({
-            icon: 'info',
-            title: 'Stock Limit Reached',
-            text: `Only ${currentStock} items are available for this size.`
-        });
-    } else {
-        // Only increase the quantity if it's less than the stock
-        $('#quantity-value').text(++qty);
-    }
-});
-
-    $('#quantity-minus').on('click', () => {
-        let qty = parseInt($('#quantity-value').text());
-        if (qty > 1) {
-            $('#quantity-value').text(--qty);
-        }
-    });
-
-    $('#add-to-cart').on('click', function() {
-        // Validation
-
-         if (!selectedVariantId) {
-            Swal.fire({
-              icon: 'warning',
-              title: 'Hold on!',
-              text: 'Please select a color.'
-            });
-            return;
-        }
-        if (!selectedSize) {
-            Swal.fire({
-              icon: 'warning',
-              title: 'Almost there!',
-              text: 'Please select a size.'
-            });
-            return;
-        }
-        
-        const $button = $(this);
-        const cartData = {
-            productId: {{ $product->id }},
-            variantId: selectedVariantId,
-            size: selectedSize,
-            quantity: parseInt($('#quantity-value').text()),
-            _token: "{{ csrf_token() }}" 
-        };
-
-        // AJAX call to add the product to the cart
-        $.ajax({
-            url: '{{ route("cart.add") }}',
-            type: 'POST',
-            data: cartData,
-            beforeSend: function() {
-                // Provide visual feedback
-                $button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding...');
-            },
-            success: function(response) {
-                if (response.success) {
-                    // Update the cart display everywhere
-                    updateCartOffcanvas();
-                    
-                    // Automatically open the cart offcanvas to show the user their new item
-                    const cartOffcanvas = new bootstrap.Offcanvas(document.getElementById('cartOffcanvas'));
-                    cartOffcanvas.show();
-                } else {
-                    Swal.fire({
-                      icon: 'error',
-                      title: 'Oops...',
-                      text: response.message || 'An unknown error occurred.'
-                    });
-                }
-            },
-            error: function(xhr) {
-                let errorMessage = 'Something went wrong. Please try again.';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                Swal.fire({
-                  icon: 'error',
-                  title: 'Request Failed',
-                  text: errorMessage
-                });
-            },
-            complete: function() {
-                // Restore the button to its original state
-                $button.prop('disabled', false).html('Add To Cart');
-            }
-        });
-    });
-
-     // --- NEW SEPARATE "Buy Now" Handler ---
-    $('#buy-now').on('click', function() {
-        if (!selectedVariantId) {
-            Swal.fire({ icon: 'warning', title: 'Hold on!', text: 'Please select a color.' });
-            return;
-        }
-        if (!selectedSize) {
-            Swal.fire({ icon: 'warning', title: 'Almost there!', text: 'Please select a size.' });
-            return;
-        }
-
-        const $button = $(this);
-        const cartData = {
-            productId: {{ $product->id }},
-            variantId: selectedVariantId,
-            size: selectedSize,
-            quantity: parseInt($('#quantity-value').text()),
-            _token: "{{ csrf_token() }}"
-        };
-
-        $.ajax({
-            url: '{{ route("cart.add") }}',
-            type: 'POST',
-            data: cartData,
-            beforeSend: function() {
-                $button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Processing...');
-            },
-            success: function(response) {
-                if (response.success) {
-                    updateCartOffcanvas();
-                    
-                     @auth
-                        // If user is logged in, redirect straight to checkout
-                        window.location.href = "{{ route('user.checkout') }}";
-                    @else
-                        // If user is a guest, open the login/register offcanvas
-                        const signInOffcanvas = new bootstrap.Offcanvas(document.getElementById('signInOffcanvas'));
-                        signInOffcanvas.show();
-                    @endauth
-                } else {
-                    Swal.fire({ icon: 'error', title: 'Oops...', text: response.message || 'An error occurred.' });
-                }
-            },
-            error: function() {
-                Swal.fire({ icon: 'error', title: 'Request Failed', text: 'Something went wrong.' });
-            },
-            complete: function() {
-                // Only re-enable the button if the user is a guest (and the modal is shown)
-                // Otherwise, the page will redirect.
-                @guest
-                    $button.prop('disabled', false).html('Buy Now');
-                @endguest
-            }
-        });
-    });
-
-    // --- NEW: Handle Add to Wishlist on Product Detail Page ---
-    $('#add-to-wishlist').on('click', function() {
-        @auth
-            // --- USER IS LOGGED IN ---
-            if (!selectedVariantId) {
-                Swal.fire({ icon: 'warning', title: 'Hold on!', text: 'Please select a color first.' });
-                return;
-            }
-            if (!selectedSize) {
-                Swal.fire({ icon: 'warning', title: 'Almost there!', text: 'Please select a size.' });
-                return;
-            }
-
-            const $button = $(this);
-            const wishlistData = {
-                product_id: {{ $product->id }},
-                variant_id: selectedVariantId,
-                size: selectedSize,
-                _token: "{{ csrf_token() }}"
-            };
-
-            $.ajax({
-                url: '{{ route("wishlist.add") }}',
-                type: 'POST',
-                data: wishlistData,
-                beforeSend: function() {
-                    $button.prop('disabled', true).find('span').text('Adding...');
-                },
-                success: function(response) {
-    if (response.success) {
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'success',
-            title: response.message,
-            showConfirmButton: false,
-            timer: 2000
-        });
-        // UPDATE THE COUNT
-        if(response.count !== undefined) {
-            $('#wishlist-count').text(response.count);
-            $('#mobile-wishlist-count').text(response.count);
-        }
-    } else {
-         Swal.fire({ icon: 'info', title: 'Already Added', text: response.message });
-    }
-},
-                error: function(xhr) {
-                     Swal.fire({ icon: 'error', title: 'Oops...', text: 'Something went wrong. Please try again.' });
-                },
-                complete: function() {
-                    $button.prop('disabled', false).find('span').text('Add to wishlist');
-                }
-            });
-
-        @else
-            // --- USER IS A GUEST ---
-            Swal.fire({
-                title: 'Login Required',
-                text: "You need to be logged in to add items to your wishlist.",
-                icon: 'info',
-                showCancelButton: true,
-                confirmButtonText: 'Login or Register',
-                cancelButtonText: 'Not Now'
-            }).then((result) => {
-
-                 if (result.isConfirmed) {
-                    // --- START OF NEW, MORE ROBUST FIX ---
-                    const quickViewModalEl = document.getElementById('quickViewModal');
-                    const quickViewModalInstance = bootstrap.Modal.getInstance(quickViewModalEl);
-                    const signInOffcanvas = new bootstrap.Offcanvas(document.getElementById('signInOffcanvas'));
-
-                    // 1. Hide the quick view modal
-                    if (quickViewModalInstance) {
-                        quickViewModalInstance.hide();
-                    }
-
-                    // 2. Manually remove the backdrop and cleanup body styles.
-                    //    This forcefully resets the state and prevents conflicts.
-                    $('.modal-backdrop').remove();
-                    $('body').removeAttr('style').removeClass('modal-open');
-                    
-                    // 3. Show the sign-in offcanvas.
-                    signInOffcanvas.show();
-                    // --- END OF NEW FIX ---
-                }
-               
-            });
-        @endauth
-    });
-
-    // --- NEW: Add to Compare Handler ---
-    $('#add-to-compare').on('click', function() {
-        const productId = {{ $product->id }};
-        const button = $(this);
-        button.prop('disabled', true).find('span').text('Adding...');
-
-        $.ajax({
-            url: '{{ route("compare.add") }}',
-            method: 'POST',
-            data: { _token: '{{ csrf_token() }}', product_id: productId },
-            success: function(response) {
-                Swal.fire({ toast: true, position: 'top-end', icon: response.success ? 'success' : 'info', title: response.message, showConfirmButton: false, timer: 2500 });
-                if(response.count !== undefined) {
-                    $('#compare-count').text(response.count);
-                }
-            },
-            error: function() {
-                Swal.fire({icon: 'error', title: 'Error', text: 'Could not add to compare list.'});
-            },
-            complete: function() {
-                button.prop('disabled', false).find('span').text('Add to compare');
-            }
-        });
-    });
-
-    // --- Initial Page Load ---
-    initializeSlick();
-    // Trigger a click on the first color to initialize sizes and prices
-    $('.color-option.active').first().trigger('click');
-});
 </script>
 @endsection

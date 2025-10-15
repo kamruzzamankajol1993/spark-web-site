@@ -26,10 +26,25 @@ use App\Models\AreaWisePrice;
 use App\Models\HeroSection;
 use App\Models\FlashSale;
 use App\Models\HomePageDescription;
+use Illuminate\Support\Facades\Auth; // Add this at the top
+use App\Models\Wishlist; // Add this at the top
 class FrontController extends Controller
 {
 
+public function getHeaderCounts()
+{
+    $wishlistCount = 0;
+    if (Auth::check()) {
+        $wishlistCount = Wishlist::where('user_id', Auth::id())->count();
+    }
+    
+    $compareCount = count(session()->get('compare_list', []));
 
+    return response()->json([
+        'wishlist_count' => $wishlistCount,
+        'compare_count' => $compareCount,
+    ]);
+}
     private function applyFilters(\Illuminate\Http\Request $request, $query)
 {
 
@@ -103,7 +118,7 @@ class FrontController extends Controller
 }
 
 
-      /**
+  /**
      * Handle AJAX search requests for products.
      */
     public function ajaxSearch(Request $request)
@@ -114,32 +129,37 @@ class FrontController extends Controller
             return response()->json([]);
         }
 
-
         $frontEndData = DB::table('system_information')->first();
 
-        
-
         $products = Product::where('status', 1)
-        
-            ->with(['category', 'variants', 'productCategoryAssignment.category']) ->withCount('reviews')
-    ->withAvg('reviews', 'rating')
                            ->where('name', 'LIKE', "%{$query}%")
-                           ->select('name', 'slug', 'main_image', 'base_price', 'discount_price')
-                           ->take(10) // Limit the number of results
+                           ->with('images')
+                           ->take(10)
                            ->get();
 
-        // Prepare the data for the frontend, including image and product URLs
-        $products->transform(function ($product) use ($frontEndData) {
-            $imageUrl = (is_array($product->main_image) && count($product->main_image) > 0)
-                ? $frontEndData->main_url . 'public/uploads/' . $product->main_image[0]
+        $formattedProducts = $products->map(function ($product) use ($frontEndData) {
+            $imagePath = $product->images->first()->image_path ?? null;
+            $imageUrl = $imagePath
+                ? $frontEndData->main_url . 'public/' . $imagePath
                 : 'https://placehold.co/50x50?text=N/A';
             
-            $product->image_url = $imageUrl;
-            $product->url = route('product.show', $product->slug);
-            return $product;
+            // --- THIS IS THE FIX ---
+            // Send raw, unformatted numbers to the JavaScript.
+            $basePrice = $product->selling_price;
+            $discountPrice = ($product->offer_price > 0 && $product->offer_price < $product->selling_price) 
+                ? $product->offer_price 
+                : 0;
+
+            return [
+                'name' => $product->name,
+                'url' => route('product.show', $product->slug),
+                'image_url' => $imageUrl,
+                'base_price' => $basePrice,
+                'discount_price' => $discountPrice,
+            ];
         });
 
-        return response()->json($products);
+        return response()->json($formattedProducts);
     }
 
 
@@ -234,62 +254,34 @@ public function getBundleViewCount($id)
     return view('front.include.quick_view_modal_content', compact('product'));
 }
 
-     public function product(Request $request,$slug)
+     public function product(Request $request, $slug)
 {
-    // 1. Fetch the product, removing 'category' and 'subcategory' from the with() array.
     $product = Product::where('slug', $slug)
+        ->where('status', 1) // Assuming status 1 is for active products
         ->with([
-            'variants.color'
-            , 'productCategoryAssignment.category',
-            'assignChart.entries',
-            'reviews.user',
-            'reviews.images'
+            'images',
+            'category.parents', // Eager load parent category for breadcrumbs
+            'brand',
+            'stock',
+            'attributeValues.attribute', // Eager load the attribute name for each value
+            'reviews.user', // Eager load the user who wrote the review
         ])
         ->withCount('reviews')
         ->withAvg('reviews', 'rating')
         ->firstOrFail();
-$product->increment('view_count');
 
-// --- START: VIEW TRACKING LOGIC ---
-    $viewed = json_decode($request->cookie('recently_viewed', '[]'), true);
-    // Remove the current product ID if it already exists to avoid duplicates
-    $viewed = array_diff($viewed, [$product->id]);
-    // Add the current product ID to the beginning of the array
-    array_unshift($viewed, $product->id);
-    // Keep only the last 10 viewed products
-    $viewed = array_slice($viewed, 0, 10);
-    // Create a cookie that lasts for 30 days
-    $cookie = Cookie::make('recently_viewed', json_encode($viewed), 60 * 24 * 30);
-    // --- END: VIEW TRACKING LOGIC ---
-    // 2. Get all category IDs assigned to this product from the pivot table.
-    $assignedCategoryIds = AssignCategory::where('product_id', $product->id)->pluck('category_id');
+    // Fetch related products from the same category
+    $relatedProducts = Product::where('category_id', $product->category_id)
+                                ->where('id', '!=', $product->id) // Exclude the current product
+                                ->where('status', 1)
+                                ->with('images')
+                                ->inRandomOrder()
+                                ->take(7) // You can adjust the number of related products
+                                ->get();
 
-    if ($assignedCategoryIds->isNotEmpty()) {
-        // 3. Fetch the actual Category models for all assignments, eager-loading their parents.
-        $assignedCategories = Category::whereIn('id', $assignedCategoryIds)->with('parent')->get();
-
-        // 4. Find the most specific category (the one with a parent) to use as the "subcategory".
-        $subcategory = $assignedCategories->firstWhere('parent_id', '!=', null);
-
-        // 5. Determine the parent "category".
-        // If a subcategory was found, its parent is the main category.
-        // Otherwise, fall back to the first assigned category.
-        $category = $subcategory ? $subcategory->parent : $assignedCategories->first();
-        
-        // 6. Manually set the relations on the product object.
-        // This allows your view to use `$product->category` and `$product->subcategory` without any changes.
-        if ($category) {
-            $product->setRelation('category', $category);
-        }
-        if ($subcategory) {
-            $product->setRelation('subcategory', $subcategory);
-        }
-    }
-
-    $areaWisePrice = AreaWisePrice::all();
-
-    return view('front.product.show', compact('product', 'areaWisePrice'));
+    return view('front.product.show', compact('product', 'relatedProducts'));
 }
+
 public function getProductViewCount($id)
 {
     $product = Product::find($id, ['view_count']);
@@ -424,130 +416,325 @@ public function ajaxDiscountFilter(Request $request)
         // --- END: FLASH SALE LOGIC ---
     $homePageDescription = HomePageDescription::first();
         // Pass the new variables to the view
-        return view('front.index', compact('heroSection', 'featuredCategories', 'activeFlashSale', 'flashSaleProducts', 'homePageDescription'));
+
+        // --- ADD THIS LOGIC ---
+    $wishlistProductIds = [];
+    if (Auth::check()) {
+        $wishlistProductIds = Wishlist::where('user_id', Auth::id())->pluck('product_id')->toArray();
+    }
+    // --- END ADDED LOGIC ---
+        return view('front.index', compact('heroSection', 'featuredCategories', 'activeFlashSale', 'flashSaleProducts', 'homePageDescription', 'wishlistProductIds'));
     }
 
 
 
     
-   public function category(Request $request, $slug)
+public function category(Request $request, $slug)
 {
+
+    // --- ADD THIS LOGIC ---
+    $wishlistProductIds = [];
+    if (Auth::check()) {
+        $wishlistProductIds = Wishlist::where('user_id', Auth::id())->pluck('product_id')->toArray();
+    }
+    // --- END ADDED LOGIC ---
     $category = Category::where('slug', $slug)->firstOrFail();
 
-    // --- Fetch Filterable Attributes for the sidebar ---
+    // Get attributes specifically linked to this category that have options
     $attributeIds = \DB::table('attribute_category')
                        ->where('category_id', $category->id)
                        ->distinct()
                        ->pluck('attribute_id');
 
     $filterableAttributes = Attribute::whereIn('id', $attributeIds)
-                                     ->where('input_type', '!=', 'text')
+                                     ->whereHas('options')
                                      ->with('options')
                                      ->get();
 
-    // --- FETCH PRODUCTS FOR THIS SPECIFIC CATEGORY ---
-    
-    // 1. Fetch products where the 'category_id' is a direct match to the current category.
-    $products = Product::where('category_id', $category->id)
-                        ->where('status', 1)
-                        ->with('images')
-                        ->latest()
-                        ->paginate(20); // 2. Set pagination to 20 products per page.
+    // Start the query for products in this category
+    $query = Product::where('category_id', $category->id)
+                        ->where('status', 1);
 
-    return view('front.category.category', compact('category', 'filterableAttributes', 'products'));
+    // --- APPLY FILTERS FROM REQUEST ON INITIAL LOAD ---
+
+    // Filter by Price Range
+    if ($request->filled('min_price') && $request->filled('max_price')) {
+        $minPrice = $request->min_price;
+        $maxPrice = $request->max_price;
+        $isDefaultPriceRange = ($minPrice == 1000 && $maxPrice == 500000);
+        if (!$isDefaultPriceRange) {
+            $query->where(function ($q) use ($minPrice, $maxPrice) {
+                $q->where(function ($sq) use ($minPrice, $maxPrice) {
+                    $sq->where('offer_price', '>', 0)
+                       ->whereBetween('offer_price', [$minPrice, $maxPrice]);
+                })->orWhere(function ($sq) use ($minPrice, $maxPrice) {
+                    $sq->where(fn($ssq) => $ssq->where('offer_price', '=', 0)->orWhereNull('offer_price'))
+                       ->whereBetween('selling_price', [$minPrice, $maxPrice]);
+                });
+            });
+        }
+    }
+
+    // Filter by Availability
+    if ($request->filled('availability') && is_array($request->availability)) {
+        if (in_array('in_stock', $request->availability)) {
+            $query->whereHas('stock', function ($q) {
+                $q->where('quantity', '>', 0);
+            });
+        }
+    }
+
+    // Filter by Dynamic Attributes
+    $attributes = $request->input('attributes');
+    if (is_array($attributes)) {
+        $attributes = array_filter($attributes);
+    }
+    if (!empty($attributes)) {
+        foreach ($attributes as $attributeId => $values) {
+            if (is_array($values) && !empty($values)) {
+                $query->whereHas('attributeValues', function ($subQuery) use ($attributeId, $values) {
+                    $subQuery->where('attribute_id', $attributeId)
+                                ->whereIn('value', $values);
+                });
+            }
+        }
+    }
+
+    // Apply Sorting
+    $sortBy = $request->input('sort_by', 'default');
+    switch ($sortBy) {
+        case 'price_asc':
+            $query->orderByRaw('ISNULL(offer_price), offer_price ASC, selling_price ASC');
+            break;
+        case 'price_desc':
+            $query->orderByRaw('ISNULL(offer_price), offer_price DESC, selling_price DESC');
+            break;
+        case 'newest':
+        default:
+            $query->latest();
+            break;
+    }
+
+    // Paginate the final, filtered results for the initial page load
+    $products = $query->with('images')->paginate(20);
+
+    return view('front.category.category', compact('wishlistProductIds', 'category', 'filterableAttributes', 'products'));
 }
-    public function productSearch(Request $request)
-{
-    $searchQuery = $request->input('query');
 
-    if (!$searchQuery) {
-        return redirect()->route('shop.show');
+public function filterProducts(Request $request)
+{
+    // Start the base query for active products
+    $query = Product::where('status', 1);
+
+    // 1. Filter by the Category
+    if ($request->filled('category_id')) {
+        $query->where('category_id', $request->category_id);
+    }
+
+    // 2. Filter by Price Range
+    if ($request->filled('min_price') && $request->filled('max_price')) {
+        $minPrice = $request->min_price;
+        $maxPrice = $request->max_price;
+        $isDefaultPriceRange = ($minPrice == 1000 && $maxPrice == 500000);
+        if (!$isDefaultPriceRange) {
+            $query->where(function ($q) use ($minPrice, $maxPrice) {
+                $q->where(function ($sq) use ($minPrice, $maxPrice) {
+                    $sq->where('offer_price', '>', 0)
+                       ->whereBetween('offer_price', [$minPrice, $maxPrice]);
+                })->orWhere(function ($sq) use ($minPrice, $maxPrice) {
+                    $sq->where(fn($ssq) => $ssq->where('offer_price', '=', 0)->orWhereNull('offer_price'))
+                       ->whereBetween('selling_price', [$minPrice, $maxPrice]);
+                });
+            });
+        }
+    }
+
+    // 3. Filter by Availability
+    if ($request->filled('availability') && is_array($request->availability)) {
+        if (in_array('in_stock', $request->availability)) {
+            $query->whereHas('stock', function ($q) {
+                $q->where('quantity', '>', 0);
+            });
+        }
+    }
+
+    // 4. Filter by Dynamic Attributes --- THE FIX IS HERE ---
+    // We use !empty() for the most reliable check on the incoming array.
+    
+        // 1. Get the attributes from the request.
+    $attributes = $request->input('attributes');
+
+    // 2. Ensure it's an array and clean it by removing any empty/null values.
+    if (is_array($attributes)) {
+        $attributes = array_filter($attributes);
+    }
+
+    // 3. Now, check if the CLEANED array has any data.
+    if (!empty($attributes)) {
+        foreach ($attributes as $attributeId => $values) {
+            // Also check if the inner value array is not empty
+            if (is_array($values) && !empty($values)) {
+                $query->whereHas('attributeValues', function ($subQuery) use ($attributeId, $values) {
+                    $subQuery->where('attribute_id', $attributeId)
+                                ->whereIn('value', $values);
+                });
+            }
+        }
     }
     
-    // Start a base query for active products
-    $query = Product::where('status', 1);
 
-    // Apply all filters from the request, including the search query
-    $query = $this->applyFilters($request, $query);
+    // 5. Apply Sorting
+    $sortBy = $request->input('sort_by', 'default');
+    switch ($sortBy) {
+        case 'price_asc':
+            $query->orderByRaw('ISNULL(offer_price), offer_price ASC, selling_price ASC');
+            break;
+        case 'price_desc':
+            $query->orderByRaw('ISNULL(offer_price), offer_price DESC, selling_price DESC');
+            break;
+        case 'newest':
+        default:
+            $query->latest();
+            break;
+    }
 
-    // Paginate the final, fully-filtered results
-    $products = $query->with(['variants', 'productCategoryAssignment.category'])
-        ->withCount('reviews')
-        ->withAvg('reviews', 'rating')
-        ->paginate(16);
+    // Paginate the final results
+    $products = $query->with('images')->paginate(20);
 
-    // Manually load categories for the current page of products
-    // ... (your existing manual category loading logic can remain here if needed) ...
+    // Prepare the HTML response
+    $html = '';
+    if ($products->isNotEmpty()) {
+        foreach ($products as $product) {
+            $html .= view('front.product._product-card', compact('product'))->render();
+        }
+    }
 
-    // Fetch data for the filter sidebar
-    $categoryList = Category::where('status', 1)->whereNull('parent_id')->with('children')->get();
-    $animationCategoryList = AnimationCategory::where('status', 1)->get();
-    $sizes = Size::where('status', 1)->get();
-
-    return view('front.main.search_results', compact('sizes','products', 'categoryList', 'animationCategoryList', 'searchQuery'));
-}
-
-public function ajaxSearchFilter(Request $request)
-{
-    // Start with the base query for active products.
-    $query = Product::where('status', 1);
-
-    // Use the central helper to apply ALL filters, including the search query.
-    $query = $this->applyFilters($request, $query);
-
-    // Fetch and paginate the results
-    $products = $query->with(['variants', 'productCategoryAssignment.category'])
-        ->withCount('reviews')
-        ->withAvg('reviews', 'rating')
-        ->paginate(12);
-
-    // Manually load categories for the current page of products
-    // ... (your existing manual category loading logic can remain here if needed) ...
-    
-    $html = view('front.category.product_card_partial', compact('products'))->render();
-
+    // Return the final JSON response
     return response()->json([
         'html' => $html,
         'hasMorePages' => $products->hasMorePages(),
     ]);
 }
+ 
 
-    public function shop(Request $request)
-{
-    $query = Product::where('status', 1);
-    $query = $this->applyFilters($request, $query);
+   public function productSearch(Request $request)
+    {
+        $searchQuery = $request->input('query');
+        if (!$searchQuery) {
+            return redirect()->route('shop.show');
+        }
 
+        $wishlistProductIds = Auth::check() ? Wishlist::where('user_id', Auth::id())->pluck('product_id')->toArray() : [];
 
-    $products = $query->with(['category', 'variants', 'productCategoryAssignment.category']) ->withCount('reviews')
-        ->withAvg('reviews', 'rating')
-        ->latest()
-        ->paginate(12);
-        
-    // 2. Manually load categories for the products on the current page
-    $productIdsOnPage = $products->pluck('id');
-    if ($productIdsOnPage->isNotEmpty()) {
-        $assignments = AssignCategory::whereIn('product_id', $productIdsOnPage)->get()->keyBy('product_id');
-        $categoryIds = $assignments->pluck('category_id')->unique();
-        $categories = Category::whereIn('id', $categoryIds)->get()->keyBy('id');
+        // Base query for the search
+        $query = Product::where('status', 1)->where('name', 'LIKE', '%' . $searchQuery . '%');
 
-        foreach ($products as $product) {
-            $assignment = $assignments->get($product->id);
-            if ($assignment) {
-                $category = $categories->get($assignment->category_id);
-                if ($category) {
-                    $product->setRelation('category', $category);
+        // --- NEW: Find filterable attributes for the search results ---
+        $productIdsForFilters = $query->pluck('id');
+        $attributeIds = \App\Models\ProductAttributeValue::whereIn('product_id', $productIdsForFilters)
+                                                         ->distinct()
+                                                         ->pluck('attribute_id');
+        $filterableAttributes = Attribute::whereIn('id', $attributeIds)
+                                         ->whereHas('options')
+                                         ->with('options')
+                                         ->get();
+        // --- END NEW ---
+
+        // Now apply filters from the URL for the initial page load
+        $filteredQuery = $this->applySearchFilters($request, clone $query);
+        $products = $filteredQuery->with('images', 'stock')->latest()->paginate(16)->appends($request->all());
+
+        return view('front.main.search_results', compact(
+            'products', 
+            'searchQuery', 
+            'wishlistProductIds',
+            'filterableAttributes'
+        ));
+    }
+
+    /**
+     * NEW: Handle AJAX filter requests specifically for the search page.
+     */
+    public function ajaxSearchFilter(Request $request)
+    {
+        $searchQuery = $request->input('query');
+        if (!$searchQuery) {
+            return response()->json(['html' => '', 'hasMorePages' => false]);
+        }
+
+        $wishlistProductIds = Auth::check() ? Wishlist::where('user_id', Auth::id())->pluck('product_id')->toArray() : [];
+
+        // Start with the base search query
+        $query = Product::where('status', 1)->where('name', 'LIKE', '%' . $searchQuery . '%');
+
+        // Apply additional filters from the sidebar
+        $query = $this->applySearchFilters($request, $query);
+
+        $products = $query->with('images', 'stock')->paginate(16);
+
+        $html = '';
+        if ($products->isNotEmpty()) {
+            foreach ($products as $product) {
+                // Pass wishlistProductIds to the partial
+                $html .= view('front.product._product-card', compact('product', 'wishlistProductIds'))->render();
+            }
+        }
+
+        return response()->json([
+            'html' => $html,
+            'hasMorePages' => $products->hasMorePages(),
+        ]);
+    }
+
+    /**
+     * NEW: A dedicated filter helper for search and category pages.
+     */
+    private function applySearchFilters(Request $request, $query)
+    {
+        // Price Range
+        if ($request->filled('min_price') && $request->filled('max_price')) {
+            $minPrice = $request->min_price;
+            $maxPrice = $request->max_price;
+            if ($minPrice != 1000 || $maxPrice != 500000) { // Check if not default
+                 $query->where(function ($q) use ($minPrice, $maxPrice) {
+                    $q->whereBetween('selling_price', [$minPrice, $maxPrice])
+                      ->orWhere(function($sq) use ($minPrice, $maxPrice) {
+                          $sq->where('offer_price', '>', 0)->whereBetween('offer_price', [$minPrice, $maxPrice]);
+                      });
+                });
+            }
+        }
+
+        // Availability
+        if ($request->filled('availability') && in_array('in_stock', $request->availability)) {
+            $query->whereHas('stock', fn($q) => $q->where('quantity', '>', 0));
+        }
+
+        // Dynamic Attributes
+        $attributes = $request->input('attributes');
+        if (is_array($attributes) && !empty(array_filter($attributes))) {
+            foreach (array_filter($attributes) as $attributeId => $values) {
+                if (is_array($values) && !empty($values)) {
+                    $query->whereHas('attributeValues', function ($subQuery) use ($attributeId, $values) {
+                        $subQuery->where('attribute_id', $attributeId)->whereIn('value', $values);
+                    });
                 }
             }
         }
+
+        // Sorting
+        $sortBy = $request->input('sort_by', 'default');
+        switch ($sortBy) {
+            case 'price_asc': $query->orderByRaw('ISNULL(offer_price), offer_price ASC, selling_price ASC'); break;
+            case 'price_desc': $query->orderByRaw('ISNULL(offer_price), offer_price DESC, selling_price DESC'); break;
+            case 'newest':
+            default: $query->latest(); break;
+        }
+
+        return $query;
     }
 
-    // Fetch data for the filter sidebar
-    $sizes = Size::where('status', 1)->get();
-    $categoryList = Category::where('status', 1)->whereNull('parent_id')->with('children')->get();
-    $animationCategoryList = AnimationCategory::where('status', 1)->get();
-
-    return view('front.main.shop', compact('products', 'categoryList', 'animationCategoryList', 'sizes'));
-}
+   
 
      /**
      * NEW dedicated function to handle AJAX filter requests for the shop page.
@@ -598,141 +785,7 @@ public function ajaxSearchFilter(Request $request)
 }
 
 
-/**
-     * MODIFIED: Display the initial offer page with its bundle deals.
-     */
-    public function offer($slug)
-    {
-        $offer = BundleOffer::where('slug', $slug)->firstOrFail();
 
-        // 1. Paginate the actual bundle deals for this offer
-        $bundleDeals = BundleOfferProduct::where('bundle_offer_id', $offer->id)->paginate(12);
-
-        // 2. Get all unique product IDs from the current page of deals
-        $allProductIds = $bundleDeals->pluck('product_id')->flatten()->unique()->all();
-
-        // 3. Fetch all related products in a single query for efficiency
-        $productsCollection = Product::whereIn('id', $allProductIds) ->withCount('reviews')
-        ->withAvg('reviews', 'rating')->get()->keyBy('id');
-
-        // Fetch all active offers for the filter sidebar
-        $offerList = BundleOffer::where('status', 1)->where('enddate', '>=', now())->get();
-
-        return view('front.offer.show', compact('offer', 'bundleDeals', 'productsCollection', 'offerList'));
-    }
-
-    /**
-     * MODIFIED: Handle AJAX requests to filter and display bundle deals.
-     */
-    public function filterOffers(Request $request)
-{
-    $request->validate(['offer_id' => 'required|integer|exists:bundle_offers,id']);
-
-    // Start the query for bundle deals
-    $query = BundleOfferProduct::where('bundle_offer_id', $request->offer_id);
-
-    // MODIFIED: Add the price range filter to the query
-    if ($request->filled('min_price') && $request->filled('max_price')) {
-        $query->whereBetween('discount_price', [(float)$request->min_price, (float)$request->max_price]);
-    }
-
-    // Paginate the results
-    $bundleDeals = $query->paginate(12);
-
-    // The rest of the method remains the same
-    $allProductIds = $bundleDeals->pluck('product_id')->flatten()->unique()->all();
-    $productsCollection = Product::whereIn('id', $allProductIds) ->withCount('reviews')
-        ->withAvg('reviews', 'rating')->get()->keyBy('id');
-    $html = view('front.offer.bundle_card_partial', compact('bundleDeals', 'productsCollection'))->render();
-
-    return response()->json([
-        'html' => $html,
-        'hasMorePages' => $bundleDeals->hasMorePages(),
-    ]);
-}
-
-
-    /**
- * Handle AJAX requests for filtering on category and subcategory pages.
- */
-public function filterProducts(Request $request)
-    {
-        // Start a query for all active products.
-        $query = Product::where('status', 1);
-
-        // Filter by the specific Category ID provided in the request
-        if ($request->filled('category_id')) {
-            // This now uses a simple 'where' clause for a direct match
-            $query->where('category_id', $request->category_id);
-        }
-        
-        // This is where other filters (price, attributes) can be added in the future.
-
-        // Paginate the results with 20 products per page
-        $products = $query->with('images')->latest()->paginate(20);
-
-        // Render only the product cards into HTML
-        $html = view('front.product._product-card', compact('products'))->render();
-
-        // Return a JSON response for the JavaScript to process
-        return response()->json([
-            'html' => $html,
-            'hasMorePages' => $products->hasMorePages(),
-        ]);
-    }
-
-     public function animationCategory(Request $request, $slug)
-{
-    $animationCategory = AnimationCategory::where('slug', $slug)->firstOrFail();
-
-    // 1. Get all product IDs for the base animation category.
-    $productIds = AssignCategory::where('category_id', $animationCategory->id)
-        ->where('type', 'animation')
-        ->pluck('product_id');
-
-    // 2. Create the base query for these products.
-    $query = Product::whereIn('id', $productIds)->where('status', 1);
-
-    // 3. Apply all additional filters from the URL.
-    $query = $this->applyFilters($request, $query);
-
-    // 4. Paginate the final, filtered results.
-    $products = $query->with(['variants', 'productCategoryAssignment.category'])
-        ->withCount('reviews')
-        ->withAvg('reviews', 'rating')
-        ->paginate(12);
-
-    // Fetch data for the filter sidebar (remains the same).
-    $animationCategoryList = AnimationCategory::where('status', 1)->get();
-    $sizes = Size::where('status', 1)->get();
-
-    return view('front.animation.show', compact('animationCategory', 'products', 'animationCategoryList', 'sizes'));
-}
-
-    public function filterAnimationCategory(Request $request)
-{
-    // Start with a base query for all active products.
-    $query = Product::where('status', 1);
-
-    // Use the central helper to apply ALL filters from the request,
-    // including the `animation_category_id`.
-    $query = $this->applyFilters($request, $query);
-
-    // Paginate the final, filtered results.
-    $products = $query->with(['variants', 'productCategoryAssignment.category'])
-        ->withCount('reviews')
-        ->withAvg('reviews', 'rating')
-        ->paginate(12);
-
-    // Manually load categories for the current page of products
-    // ... (your existing manual category loading logic can remain here) ...
-    
-    $html = view('front.category.product_card_partial', compact('products'))->render();
-
-    return response()->json([
-        'html' => $html,
-        'hasMorePages' => $products->hasMorePages(),
-    ]);
-}
+   
     
 }

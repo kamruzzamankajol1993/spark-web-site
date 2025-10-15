@@ -4,113 +4,103 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Product;
-use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Validator;
 
 class CompareController extends Controller
 {
+    private $limit = 4; // Max products to compare
+
     /**
-     * Display the product comparison page.
+     * Display the compare page.
      */
-    public function index()
+   public function index()
     {
-        $compare = Session::get('compare', []);
-        $products = Product::whereIn('id', $compare)->with(['brand', 'category', 'variants'])->get();
+        $productIds = session()->get('compare_list', []);
+
+        // Eager load all necessary relationships for the compare table.
+        // The 'brand' relationship has been removed as requested.
+        $products = Product::whereIn('id', $productIds)
+            ->with([
+                'images',
+                'attributeValues.attribute' // This correctly loads all generic attributes, including Brand
+            ])
+            ->get();
+            
         return view('front.compare.index', compact('products'));
     }
 
+
     /**
-     * Add a product to the comparison list.
+     * Add a product to the compare list.
      */
     public function add(Request $request)
     {
-        $request->validate(['product_id' => 'required|exists:products,id']);
-        
-        $productId = $request->product_id;
-        $compare = Session::get('compare', []);
-
-        // Limit the comparison to a maximum of 4 products
-        if (count($compare) >= 4) {
-            return response()->json(['success' => false, 'message' => 'You can only compare up to 4 products at a time.']);
-        }
-
-        if (!in_array($productId, $compare)) {
-            Session::push('compare', $productId);
-            $message = 'Product added to compare list!';
-        } else {
-            $message = 'This product is already in your compare list.';
-        }
-        
-        return response()->json([
-            'success' => true,
-            'message' => $message,
-            'count' => count(Session::get('compare', []))
-        ]);
-    }
-
-    /**
-     * Add multiple products (from a bundle) to the comparison list.
-     */
-    public function addMultiple(Request $request)
-    {
         $validator = Validator::make($request->all(), [
-            'product_ids'   => 'required|array|min:1',
-            'product_ids.*' => 'integer|exists:products,id',
+            'product_id' => 'required|integer|exists:products,id',
         ]);
-
         if ($validator->fails()) {
-            return response()->json(['success' => false, 'message' => 'Invalid product data.'], 422);
+            return response()->json(['success' => false, 'message' => 'Invalid product.'], 422);
         }
 
-        $productIds = $request->product_ids;
-        $compare = Session::get('compare', []);
-        
-        $newCompareList = array_unique(array_merge($compare, $productIds));
+        $compareList = session()->get('compare_list', []);
+        $productId = $request->product_id;
 
-        if (count($newCompareList) > 4) {
-            return response()->json([
-                'success' => false, 
-                'message' => 'Cannot add these items. The compare list is limited to 4 products.'
-            ]);
+        if (in_array($productId, $compareList)) {
+            return response()->json(['success' => false, 'message' => 'Product is already in the compare list.']);
         }
-        
-        Session::put('compare', $newCompareList);
+
+        if (count($compareList) >= $this->limit) {
+            return response()->json(['success' => false, 'message' => 'You can only compare up to ' . $this->limit . ' products.'], 403);
+        }
+
+        $compareList[] = $productId;
+        session()->put('compare_list', $compareList);
 
         return response()->json([
             'success' => true,
-            'message' => 'Products added to compare list!',
-            'count' => count($newCompareList)
+            'message' => 'Product added to compare list!',
+            'compare_count' => count($compareList)
         ]);
     }
 
     /**
-     * Remove a product from the comparison list.
+     * Remove a product from the compare list.
      */
     public function remove(Request $request)
     {
-        $request->validate(['product_id' => 'required|exists:products,id']);
-
-        $productId = $request->product_id;
-        $compare = Session::get('compare', []);
-
-        if (($key = array_search($productId, $compare)) !== false) {
-            unset($compare[$key]);
-            Session::put('compare', array_values($compare)); // Re-index the array
+        $validator = Validator::make($request->all(), [
+            'product_id' => 'required|integer|exists:products,id',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => 'Invalid product.'], 422);
         }
+        
+        $compareList = session()->get('compare_list', []);
+        $productId = $request->product_id;
+
+        // Find and remove the product ID
+        $index = array_search($productId, $compareList);
+        if ($index !== false) {
+            unset($compareList[$index]);
+        }
+        
+        session()->put('compare_list', array_values($compareList)); // Re-index array
 
         return response()->json([
             'success' => true,
             'message' => 'Product removed from compare list.',
-            'count' => count(Session::get('compare', []))
+            'compare_count' => count(session()->get('compare_list', []))
         ]);
     }
-    
-    /**
-     * Clear the entire comparison list.
-     */
+
     public function clear()
     {
-        Session::forget('compare');
-        return redirect()->route('compare.index')->with('success', 'Compare list has been cleared.');
+        session()->forget('compare_list');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Compare list has been cleared!',
+            'compare_count' => 0
+        ]);
     }
 }

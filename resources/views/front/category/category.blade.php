@@ -54,6 +54,7 @@
             </div>
         </div>
 
+        {{-- Mobile Filter Button --}}
         <div class="row d-lg-none mt-3">
             <div class="col-12">
                 <button class="btn btn-dark filter-button w-100" type="button" data-bs-toggle="offcanvas"
@@ -64,76 +65,24 @@
         </div>
 
         <div class="row mt-4">
-
+            {{-- Desktop Filter Sidebar --}}
             <div class="col-lg-3 d-none d-lg-block">
                 <div class="spark_product_page_filter-sidebar">
-
-                    <div class="spark_product_page_filter-group mb-2">
-                        <div class="spark_product_page_filter-title" data-bs-toggle="collapse" data-bs-target="#priceCollapse">
-                            Price Range <i class="fas fa-chevron-down float-end"></i>
-                        </div>
-                        <div class="collapse show" id="priceCollapse">
-                            <div class="spark_product_page_range-slider px-2">
-                                <input type="range" min="1000" max="500000" value="1000" id="minPrice">
-                                <input type="range" min="1000" max="500000" value="500000" id="maxPrice">
-                                <div class="d-flex justify-content-between mt-2">
-                                    <span class="badge bg-danger">1,000৳</span>
-                                    <span class="badge bg-danger">500,000৳</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="spark_product_page_filter-group mb-2">
-                        <div class="spark_product_page_filter-title" data-bs-toggle="collapse" data-bs-target="#availabilityCollapse">
-                            Availability <i class="fas fa-chevron-down float-end"></i>
-                        </div>
-                        <div class="collapse show" id="availabilityCollapse">
-                            <div class="form-check"><input class="form-check-input" type="checkbox" id="instock"><label class="form-check-label" for="instock">In Stock</label></div>
-                            <div class="form-check"><input class="form-check-input" type="checkbox" id="preorder"><label class="form-check-label" for="preorder">Pre Order</label></div>
-                            <div class="form-check"><input class="form-check-input" type="checkbox" id="upcoming"><label class="form-check-label" for="upcoming">Up Coming</label></div>
-                        </div>
-                    </div>
-
-                    @if(isset($filterableAttributes) && $filterableAttributes->isNotEmpty())
-                        @foreach($filterableAttributes as $attribute)
-                            @if($attribute->options->isNotEmpty())
-                                <div class="spark_product_page_filter-group mb-2">
-                                    <div class="spark_product_page_filter-title" data-bs-toggle="collapse" data-bs-target="#collapse-{{ \Illuminate\Support\Str::slug($attribute->name) }}">
-                                        {{ $attribute->name }} <i class="fas fa-chevron-down float-end"></i>
-                                    </div>
-                                    <div class="collapse" id="collapse-{{ \Illuminate\Support\Str::slug($attribute->name) }}">
-                                        {{-- This class now correctly enables individual scrolling --}}
-                                        <div class="spark_product_page_filter-scroll">
-                                            @foreach($attribute->options as $option)
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" value="{{ $option->value }}" id="option-{{ $option->id }}">
-                                                    <label class="form-check-label" for="option-{{ $option->id }}">{{ $option->value }}</label>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                </div>
-                            @endif
-                        @endforeach
-                    @endif
+                    <form id="desktop-filter-form">
+                      @include('front.include._filter_sidebar_content')
+                    </form>
                 </div>
             </div>
 
+            {{-- Product Grid --}}
             <div class="col-lg-9">
                 <div class="spark_product_page_sort-bar d-flex justify-content-end mb-3 align-items-center">
-                    <span class="text-muted me-2" style="font-size: 0.9rem;">Show</span>
-                    <select class="form-select form-select-sm w-auto me-3">
-                        <option selected>20</option>
-                        <option value="1">40</option>
-                        <option value="2">60</option>
-                    </select>
                     <span class="text-muted me-2" style="font-size: 0.9rem;">Sort by</span>
-                    <select class="form-select form-select-sm w-auto">
-                        <option selected>Default</option>
-                        <option value="1">Price: Low to High</option>
-                        <option value="2">Price: High to Low</option>
-                        <option value="3">Newest</option>
+                    <select class="form-select form-select-sm w-auto product_page_sort_select" name="sort_by">
+                        <option value="default" selected>Default</option>
+                        <option value="price_asc">Price: Low to High</option>
+                        <option value="price_desc">Price: High to Low</option>
+                        <option value="newest">Newest</option>
                     </select>
                 </div>
 
@@ -165,55 +114,124 @@
 @section('script')
 <script>
 $(document).ready(function() {
-    let currentPage = {{ $products->currentPage() }};
+    let currentPage = 1;
     let hasMorePages = {{ $products->hasMorePages() ? 'true' : 'false' }};
     let isLoading = false;
     const loadingIndicator = $('#loading-indicator');
     const productGrid = $('#product-grid-container');
 
-    function loadMoreProducts() {
-        if (isLoading || !hasMorePages) return;
+    /**
+     * Reads the current URL's query parameters and sets the filter
+     * inputs to match. This makes the UI consistent on page reload.
+     */
+    function setFiltersFromUrl() {
+        const params = new URLSearchParams(window.location.search);
 
+        // Set sort dropdown
+        if (params.has('sort_by')) {
+            $('.product_page_sort_select').val(params.get('sort_by'));
+        }
+
+        // Set price range sliders
+        if (params.has('min_price')) {
+            $('input[name="min_price"]').val(params.get('min_price'));
+        }
+        if (params.has('max_price')) {
+            $('input[name="max_price"]').val(params.get('max_price'));
+        }
+
+        // Check availability boxes
+        params.getAll('availability[]').forEach(value => {
+            $(`input[name="availability[]"][value="${value}"]`).prop('checked', true);
+        });
+
+        // Check dynamic attribute boxes
+        for (const [key, value] of params.entries()) {
+            const match = key.match(/attributes\[(\d+)\]\[\]/);
+            if (match) {
+                const attributeId = match[1];
+                // Use quotes around the value to handle special characters
+                $(`input[name="attributes[${attributeId}][]"][value="${value}"]`).prop('checked', true);
+            }
+        }
+    }
+
+    /**
+     * Fetches products via AJAX based on the current filter settings.
+     * Also updates the browser's URL to reflect the new filter state.
+     */
+    function fetchProducts(page = 1, append = false) {
+        if (isLoading) return;
         isLoading = true;
-        currentPage++;
+        if (!append) {
+             productGrid.html(''); // Clear grid for new filter
+        }
         loadingIndicator.show();
 
-        const categoryId = '{{ $category->id }}';
+        const formId = window.innerWidth >= 992 ? '#desktop-filter-form' : '#mobile-filter-form';
+        const filterData = $(formId).serialize();
+        const sortData = $('.product_page_sort_select').serialize();
+        const allParams = filterData + '&' + sortData;
+
+        // --- NEW: Update browser URL without reloading the page ---
+        const newUrl = window.location.pathname + '?' + allParams;
+        window.history.pushState({ path: newUrl }, '', newUrl);
+        // --- End New ---
 
         $.ajax({
             url: "{{ route('products.filter') }}",
             type: 'GET',
-            data: {
-                page: currentPage,
-                category_id: categoryId,
-            },
+            data: allParams + '&page=' + page + '&category_id={{ $category->id }}',
             success: function(response) {
-                if (response.html.trim()) {
+                if (response.html.trim() === '' && !append) {
+                    productGrid.html('<div class="col-12"><div class="alert alert-warning text-center"><p class="mb-0">No products match your filters.</p></div></div>');
+                } else if (!append) {
+                    productGrid.html(response.html);
+                } else {
                     productGrid.append(response.html);
                 }
                 hasMorePages = response.hasMorePages;
-                if (!hasMorePages) {
-                    loadingIndicator.hide();
-                }
+                currentPage = page;
             },
             error: function() {
-                console.error('Failed to load more products.');
-                currentPage--;
+                console.error('Failed to load products.');
+                 productGrid.html('<div class="col-12"><div class="alert alert-danger text-center"><p class="mb-0">An error occurred while filtering products.</p></div></div>');
             },
             complete: function() {
                 isLoading = false;
-                if (hasMorePages) {
-                    loadingIndicator.hide();
-                }
+                loadingIndicator.hide();
             }
         });
     }
 
+    // --- Event Handlers ---
+    $('#desktop-filter-form').on('change', '.product-filter-input', function() {
+        fetchProducts(1, false);
+    });
+
+    $('#mobile-filter-form').on('submit', function(e) {
+        e.preventDefault();
+        fetchProducts(1, false);
+        var offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasFilter'));
+        offcanvas.hide();
+    });
+
+    $('.product_page_sort_select').on('change', function() {
+        fetchProducts(1, false);
+    });
+
+    // Infinite scroll
     $(window).on('scroll', function() {
-        if ($(window).scrollTop() + $(window).height() >= $(document).height() - 250) {
-            loadMoreProducts();
+        if (!hasMorePages || isLoading) return;
+        // Check if user is near the bottom of the page
+        if ($(window).scrollTop() + $(window).height() >= $(document).height() - 300) {
+            fetchProducts(currentPage + 1, true);
         }
     });
+
+    // --- Initial Setup ---
+    // On page load, set the filter controls to match the URL parameters
+    setFiltersFromUrl();
 });
 </script>
 @endsection

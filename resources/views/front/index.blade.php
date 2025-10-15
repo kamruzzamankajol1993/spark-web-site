@@ -149,19 +149,36 @@
                                 {{ number_format($product->pivot->flash_price, 0) }}৳
                             </div>
 
-                            <div class="d-grid gap-2">
-                                <button class="spark_product_box_buy-btn" type="button">
-                                    <i class="fas fa-shopping-basket me-2"></i> Buy Now
-                                </button>
-                            </div>
-                            <div class="d-flex justify-content-between">
-                                <button class="spark_product_box_compare-link" type="button">
-                                    <i class="fas fa-plus me-2"></i> Compare
-                                </button>
-                                <button class="spark_product_box_compare-link1" type="button">
-                                    <i class="fas fa-heart me-2"></i> Wishlist
-                                </button>
-                            </div>
+                            <form class="add-to-cart-form">
+    @csrf
+    <input type="hidden" name="product_id" value="{{ $product->id }}">
+    <input type="hidden" name="quantity" value="1">
+    <div class="d-grid gap-2">
+        {{-- MODIFIED: Buy Now Button --}}
+        <button class="spark_product_box_buy-btn buy-now-btn" type="button">
+            <span class="button-text"><i class="fas fa-shopping-basket me-2"></i> Buy Now</span>
+            <span class="spinner-border spinner-border-sm" style="display: none;"></span>
+        </button>
+    </div>
+</form>
+
+<div class="d-flex justify-content-between mt-2">
+    {{-- MODIFIED: Compare Button --}}
+    <button class="spark_product_box_compare-link compare-btn" type="button" data-product-id="{{ $product->id }}">
+        <span class="button-text"><i class="fas fa-plus me-2"></i> Compare</span>
+        <span class="spinner-border spinner-border-sm" style="display: none;"></span>
+    </button>
+
+    {{-- MODIFIED: Wishlist Button --}}
+    <button class="spark_product_box_compare-link1 wishlist-btn" type="button" data-product-id="{{ $product->id }}">
+        <span class="button-text">
+            {{-- This code checks if the product is in the wishlist and sets the correct icon style --}}
+            <i class="me-2 fa-heart {{ (isset($wishlistProductIds) && in_array($product->id, $wishlistProductIds)) ? 'fas' : 'far' }}"></i>
+            Wishlist
+        </span>
+        <span class="spinner-border spinner-border-sm" style="display: none;"></span>
+    </button>
+</div>
                         </div>
                     </a>
                 </div>

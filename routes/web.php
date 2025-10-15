@@ -11,6 +11,10 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\CompareController;
 use App\Http\Controllers\Front\PageController;
 
+// ... inside your FrontController group
+
+Route::get('/products/search-filter', [FrontController::class, 'ajaxSearchFilter'])->name('products.search_filter');
+Route::get('/get-header-counts', [FrontController::class, 'getHeaderCounts'])->name('header.counts');
 Route::get('/clear', function() {
     \Illuminate\Support\Facades\Artisan::call('cache:clear');
     \Illuminate\Support\Facades\Artisan::call('config:clear');
@@ -38,10 +42,16 @@ Route::controller(CheckoutController::class)->group(function () {
 Route::get('/order-success/{orderId}', [CheckoutController::class, 'orderSuccess'])->name('order.success');
 // --- Product Compare ---
 Route::controller(CompareController::class)->prefix('compare')->name('compare.')->group(function () {
+    // Shows the main compare page (e.g., yourdomain.com/compare)
     Route::get('/', 'index')->name('index');
+
+    // Handles adding a product to the compare list
     Route::post('/add', 'add')->name('add');
-    Route::post('/add-multiple', 'addMultiple')->name('addMultiple');
+    
+    // Handles removing a single product from the compare list
     Route::post('/remove', 'remove')->name('remove');
+    
+    // Handles clearing all products from the compare list
     Route::get('/clear', 'clear')->name('clear');
 });
 
@@ -53,12 +63,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/store', 'store')->name('store');
     });
 
-      Route::controller(WishlistController::class)->prefix('wishlist')->name('wishlist.')->group(function () {
+       Route::controller(WishlistController::class)->prefix('wishlist')->name('wishlist.')->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/add', 'add')->name('add');
-        Route::post('/add-bundle', 'addBundle')->name('addBundle');
         Route::post('/remove', 'remove')->name('remove');
-        Route::post('/move-to-cart', 'moveToCart')->name('moveToCart');
+        Route::post('/move-to-cart', 'moveToCart')->name('moveToCart'); // <-- ADD THIS LINE
     });
 
     Route::controller(CheckoutController::class)->group(function () {
@@ -100,12 +109,22 @@ Route::post('/user-order-cancel', 'cancelOrder')->name('user.order.cancel');
 });
 
 // Authentication Routes
+// --- ADD THESE ROUTES FOR AUTH PARTIALS ---
+Route::get('auth-partials/{form_name}', function ($form_name) {
+    if (view()->exists("front.include.{$form_name}")) {
+        return view("front.include.{$form_name}");
+    }
+    abort(404);
+});
+
+// --- UPDATE AUTHENTICATION ROUTES ---
 Route::post('/login', [AuthController::class, 'login'])->name('customer.login');
 Route::post('/register', [AuthController::class, 'register'])->name('customer.register');
 Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->name('customer.verifyOtp');
 Route::post('/resend-otp', [AuthController::class, 'resendOtp'])->name('customer.resendOtp');
 Route::post('/logout', [AuthController::class, 'logout'])->name('customer.logout');
 
+// --- ADD THESE ROUTES FOR PASSWORD RESET ---
 Route::post('/forgot-password', [AuthController::class, 'sendPasswordResetLink'])->name('password.email');
 Route::get('/reset-password/{token}', [AuthController::class, 'showResetForm'])->name('password.reset');
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
@@ -117,7 +136,7 @@ Route::get('/locations-upazilas', [LocationController::class, 'getUpazilas'])->n
 Route::controller(FrontController::class)->group(function () {
     Route::get('/bundle-view-count/{id}', [FrontController::class, 'getBundleViewCount'])->name('bundle.view_count');
 Route::get('/product-view-count/{id}', 'getProductViewCount')->name('product.view_count');
-     Route::get('/products/ajax-search-filter', 'ajaxSearchFilter')->name('products.ajax_search_filter');
+    //  Route::get('/products/ajax-search-filter', 'ajaxSearchFilter')->name('products.ajax_search_filter');
 
     Route::get('/products/ajax-search', 'ajaxSearch')->name('products.ajax_search');
     Route::get('/product-search', 'productSearch')->name('products.search');
@@ -147,21 +166,11 @@ Route::get('/offers', 'offers')->name('offers');
 });
 
 // START: MODIFIED CART ROUTES
-
-Route::controller(CartController::class)->prefix('cart')->name('cart.')->group(function () {
-
-    Route::post('/cart-add-bundle', [CartController::class, 'addBundleToCart'])->name('addBundle');
- // --- ADD THESE NEW ROUTES FOR COUPONS ---
-    Route::post('/apply-coupon', 'applyCoupon')->name('applyCoupon');
-    Route::post('/remove-coupon', 'removeCoupon')->name('removeCoupon');
-
-    Route::get('/showCartData', 'showCartData')->name('show');
-    Route::post('/add', 'addToCart')->name('add');
-    Route::get('/content', 'getCartContent')->name('content');
-     Route::get('/main-content', 'getMainCartContent')->name('main_content');
-    Route::post('/main-update', 'updateMainCartItem')->name('main.update');
-    Route::post('/main-remove', 'removeMainCartItem')->name('main.remove');
-    Route::post('/update', 'updateCartItem')->name('update');
-    Route::post('/remove', 'removeCartItem')->name('remove');
-});
+Route::get('/cart', [CartController::class, 'show'])->name('cart.show');
+Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
+Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
+Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
+Route::get('/cart/contents', [CartController::class, 'getCartContents'])->name('cart.contents');
+Route::post('/cart/apply-coupon', [CartController::class, 'applyCoupon'])->name('cart.applyCoupon'); // 👈 ADD THIS
+Route::post('/cart/remove-coupon', [CartController::class, 'removeCoupon'])->name('cart.removeCoupon'); // 👈 ADD THIS
 // END: MODIFIED CART ROUTES
