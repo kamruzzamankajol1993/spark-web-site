@@ -82,9 +82,22 @@
                     <a href="{{ route('shop.show') }}" class="btn spark_cart_page_action-btn spark_cart_page_continue-btn">
                         Continue Shopping
                     </a>
-                    <a href="#" class="btn spark_cart_page_action-btn spark_cart_page_confirm-btn">
-                        Process To Checkout
-                    </a>
+                    {{-- UPDATED SECTION: Dynamic Checkout Logic --}}
+                    @auth
+                        {{-- Case 1: User is logged in -> Go to Checkout --}}
+                        <a href="{{ route('user.checkout') }}" class="btn spark_cart_page_action-btn spark_cart_page_confirm-btn">
+                            Process To Checkout
+                        </a>
+                    @else
+                        {{-- Case 2: User is NOT logged in -> Open Login Modal --}}
+                        <a href="javascript:void(0);" 
+                           data-bs-toggle="offcanvas" 
+                           data-bs-target="#offcanvasLogin" 
+                           class="btn spark_cart_page_action-btn spark_cart_page_confirm-btn">
+                            Process To Checkout
+                        </a>
+                    @endauth
+                    {{-- END UPDATED SECTION --}}
                 </div>
             </div>
         </div>

@@ -22,14 +22,24 @@
     </div>
     <div class="mb-3">
         <label for="register-password" class="form-label">Password</label>
-        <input type="password" class="form-control" id="register-password" name="password" placeholder="Minimum 8 characters">
-    <div id="passwordHelpBlock" class="form-text text-muted" style="font-size: 0.8rem;">
+        <div class="input-group">
+            <input type="password" class="form-control" id="register-password" name="password" placeholder="Minimum 8 characters">
+            <button class="btn btn-outline-secondary toggle-password" type="button">
+                <i class="bi bi-eye"></i>
+            </button>
+        </div>
+        <div id="passwordHelpBlock" class="form-text text-muted" style="font-size: 0.8rem;">
             Password must be at least 8 characters long.
         </div>
     </div>
     <div class="mb-3">
         <label for="register-password-confirmation" class="form-label">Confirm Password</label>
-        <input type="password" class="form-control" id="register-password-confirmation" name="password_confirmation" placeholder="Retype your password">
+        <div class="input-group">
+            <input type="password" class="form-control" id="register-password-confirmation" name="password_confirmation" placeholder="Retype your password">
+            <button class="btn btn-outline-secondary toggle-password" type="button">
+                <i class="bi bi-eye"></i>
+            </button>
+        </div>
     </div>
     <div class="d-grid gap-2 mb-3">
         <button type="submit" class="btn btn-dark">

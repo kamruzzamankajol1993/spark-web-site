@@ -7,7 +7,12 @@
     </div>
     <div class="mb-3">
         <label for="login-password" class="form-label">Password</label>
-        <input type="password" class="form-control" name="password" id="login-password" placeholder="Enter your password">
+        <div class="input-group">
+            <input type="password" class="form-control" name="password" id="login-password" placeholder="Enter your password">
+            <button class="btn btn-outline-secondary toggle-password" type="button">
+                <i class="bi bi-eye"></i>
+            </button>
+        </div>
     </div>
     <div class="mb-3 d-flex justify-content-between align-items-center">
         <div class="form-check">

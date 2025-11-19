@@ -838,6 +838,25 @@
         });
     });
     </script>
+    <script>
+    // Use event delegation (document.on) so it works even if the form 
+    // is loaded dynamically via AJAX into the Offcanvas
+    $(document).on('click', '.toggle-password', function() {
+        // Find the input field associated with this button
+        const input = $(this).closest('.input-group').find('input');
+        const icon = $(this).find('i');
+
+        if (input.attr('type') === 'password') {
+            input.attr('type', 'text');
+            // Change icon to 'eye-slash' (assuming Bootstrap Icons)
+            icon.removeClass('bi-eye').addClass('bi-eye-slash');
+        } else {
+            input.attr('type', 'password');
+            // Change icon back to 'eye'
+            icon.removeClass('bi-eye-slash').addClass('bi-eye');
+        }
+    });
+</script>
 </body>
 
 </html>

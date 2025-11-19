@@ -28,12 +28,12 @@
     <table style="width: 100%;">
         <tr>
             <td style="width: 50%;">
-                <img src="{{$front_ins_url}}public/black.png" alt="Logo" style="width: 150px;">
+                <img src="{{$front_ins_url}}{{$front_logo_name}}" alt="Logo" style="width: 150px;">
             </td>
             <td style="width: 50%; text-align: right;">
                 <h2 style="margin: 0;">INVOICE</h2>
                 <p style="margin: 0; line-height: 1.5;">
-                    <strong>Spotlight Attires</strong><br>
+                    <strong>Spark</strong><br>
                     {{$front_ins_add}}<br>
                     {{$front_ins_phone}}<br>
                     {{$front_ins_email}}<br>
@@ -116,7 +116,7 @@
         <div style="clear: both;"></div>
 
         <div class="footer" style="margin-top: 50px;">
-            <p>Thank you for shopping with Spotlight Attires!</p>
+            <p>Thank you for shopping with Spark!</p>
         </div>
     </div>
 </body>

@@ -14,12 +14,12 @@ use App\Models\Product;
 use App\Models\OrderDetail;
 use Exception;
 use App\Library\SslCommerz\SslCommerzNotification;
-use Illuminate\Support\Facades\Cookie; // ADDED: For handling cookies
+use Illuminate\Support\Facades\Cookie;
 use App\Models\User;
+
 class CheckoutController extends Controller
 {
-
-     private $base_url;
+    private $base_url;
     private $app_key;
     private $app_secret;
     private $username;
@@ -30,26 +30,17 @@ class CheckoutController extends Controller
     {
         // Sandbox
         $this->base_url = 'https://tokenized.sandbox.bka.sh/v1.2.0-beta';
-        // Live
-//     $this->base_url = 'https://tokenized.pay.bka.sh/v1.2.0-beta'; 
-// $BKASH_CHECKOUT_URL_USER_NAME ='01965665880';
-// $BKASH_CHECKOUT_URL_PASSWORD = 'iRI:SK7tWbz';
-// $BKASH_CHECKOUT_URL_APP_KEY = 'JTKshr429pkbVxT6sJYjUrDPtc';
-// $BKASH_CHECKOUT_URL_APP_SECRET ='cdjFKfCvfzZxReRTogc60eASv9ZnNDZrtu3K5GzXCUunTyW1CxYz';
-
-//sandbox
-$BKASH_CHECKOUT_URL_USER_NAME ='sandboxTokenizedUser02';
-$BKASH_CHECKOUT_URL_PASSWORD = 'sandboxTokenizedUser02@12345';
-$BKASH_CHECKOUT_URL_APP_KEY = '4f6o0cjiki2rfm34kfdadl1eqq';
-$BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3fug4b';
-
+        
+        //sandbox
+        $BKASH_CHECKOUT_URL_USER_NAME ='sandboxTokenizedUser02';
+        $BKASH_CHECKOUT_URL_PASSWORD = 'sandboxTokenizedUser02@12345';
+        $BKASH_CHECKOUT_URL_APP_KEY = '4f6o0cjiki2rfm34kfdadl1eqq';
+        $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3fug4b';
 
         $this->app_key = $BKASH_CHECKOUT_URL_APP_KEY;
         $this->app_secret = $BKASH_CHECKOUT_URL_APP_SECRET;
         $this->username = $BKASH_CHECKOUT_URL_USER_NAME;
         $this->password = $BKASH_CHECKOUT_URL_PASSWORD;
-        
-        
     }
 
     // BKASH HELPER: Get bKash auth token
@@ -108,61 +99,60 @@ $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3f
 
         return json_decode($resultdata, true);
     }
+
     private function getCartData()
-{
-    $cart = Session::get('cart', []);
-    $subtotal = 0;
-    foreach ($cart as $item) {
-        $subtotal += $item['price'] * $item['quantity'];
-    }
+    {
+        $cart = Session::get('cart', []);
+        $subtotal = 0;
+        foreach ($cart as $item) {
+            $subtotal += $item['price'] * $item['quantity'];
+        }
 
-    $coupon = Session::get('coupon');
-    $discount = 0;
-    
-    if ($coupon) {
-        $eligibleSubtotal = 0;
-        $productIdsInCart = collect($cart)->where('is_bundle', false)->pluck('product_id')->unique()->all();
+        $coupon = Session::get('coupon');
+        $discount = 0;
         
-        if(!empty($productIdsInCart)){
-            $products = Product::whereIn('id', $productIdsInCart)->get()->keyBy('id');
-            foreach ($cart as $item) {
-                // Skip bundles or items whose product details couldn't be fetched
-                if (isset($item['is_bundle']) && $item['is_bundle']) continue;
-                if (!isset($products[$item['product_id']])) continue;
+        if ($coupon) {
+            $eligibleSubtotal = 0;
+            $productIdsInCart = collect($cart)->where('is_bundle', false)->pluck('product_id')->unique()->all();
+            
+            if(!empty($productIdsInCart)){
+                $products = Product::whereIn('id', $productIdsInCart)->get()->keyBy('id');
+                foreach ($cart as $item) {
+                    if (isset($item['is_bundle']) && $item['is_bundle']) continue;
+                    if (!isset($products[$item['product_id']])) continue;
 
-                $product = $products[$item['product_id']];
+                    $product = $products[$item['product_id']];
 
-                // --- CORE CHANGE: Skip products that are already on discount ---
-                if (isset($product->discount_price) && $product->discount_price > 0) {
-                    continue;
-                }
+                    if (isset($product->discount_price) && $product->discount_price > 0) {
+                        continue;
+                    }
 
-                $isCouponForAll = empty($coupon->product_ids) && empty($coupon->category_ids);
-                $isProductEligible = !empty($coupon->product_ids) && in_array($product->id, $coupon->product_ids);
-                $isCategoryEligible = !empty($coupon->category_ids) && in_array($product->category_id, $coupon->category_ids);
-                
-                if ($isCouponForAll || $isProductEligible || $isCategoryEligible) {
-                    $eligibleSubtotal += $item['price'] * $item['quantity'];
+                    $isCouponForAll = empty($coupon->product_ids) && empty($coupon->category_ids);
+                    $isProductEligible = !empty($coupon->product_ids) && in_array($product->id, $coupon->product_ids);
+                    $isCategoryEligible = !empty($coupon->category_ids) && in_array($product->category_id, $coupon->category_ids);
+                    
+                    if ($isCouponForAll || $isProductEligible || $isCategoryEligible) {
+                        $eligibleSubtotal += $item['price'] * $item['quantity'];
+                    }
                 }
             }
+            
+            if ($coupon->type === 'fixed') {
+                $discount = $coupon->value;
+            } elseif ($coupon->type === 'percent') {
+                $discount = ($eligibleSubtotal * $coupon->value) / 100;
+            }
+            
+            $discount = min($discount, $eligibleSubtotal);
         }
         
-        if ($coupon->type === 'fixed') {
-            $discount = $coupon->value;
-        } elseif ($coupon->type === 'percent') {
-            $discount = ($eligibleSubtotal * $coupon->value) / 100;
-        }
-        
-        $discount = min($discount, $eligibleSubtotal);
+        return [
+            'cart'       => $cart,
+            'subtotal'   => $subtotal,
+            'discount'   => $discount,
+            'coupon'     => $coupon,
+        ];
     }
-    
-    return [
-        'cart'       => $cart,
-        'subtotal'   => $subtotal,
-        'discount'   => $discount,
-        'coupon'     => $coupon,
-    ];
-}
 
     public function checkout()
     {
@@ -172,7 +162,20 @@ $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3f
             return redirect()->route('cart.show')->with('error', 'Your cart is empty.');
         }
 
-        $customer = Auth::user()->customer->load('addresses');
+        $user = Auth::user();
+        
+        // Ensure customer profile exists
+        if (!$user->customer) {
+             // Simple fallback to create a customer record if missing
+             $customer = \App\Models\Customer::create([
+                'user_id' => $user->id,
+                'name' => $user->name,
+                'mobile' => $user->phone,
+             ]);
+             $user->load('customer');
+        }
+        
+        $customer = $user->customer->load('addresses');
 
         return view('front.checkout.checkout', [
             'cartItems' => $cartData['cart'],
@@ -207,7 +210,7 @@ $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3f
 
         $area = RedexArea::where('District', $district)->where('Upazila_Thana', $upazila)->first();
 
-        $shippingCharge = $area ? $area->Delivery_Charge : 130; // Default if not found
+        $shippingCharge = $area ? $area->Delivery_Charge : 130; 
 
         return response()->json([
             'success' => true,
@@ -215,9 +218,8 @@ $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3f
         ]);
     }
     
-     public function placeOrder(Request $request)
+    public function placeOrder(Request $request)
     {
-        // Use request->validate() which handles redirects automatically on failure
         $request->validate([
             'shipping_address_id' => 'required|exists:customer_addresses,id',
             'payment_method'      => 'required|string|in:cod,sslcommerz,bkash',
@@ -231,18 +233,10 @@ $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3f
             return redirect()->route('cart.show')->with('error', 'Your cart is empty.');
         }
 
-       
-
         $user = Auth::user();
         $customer = $user->customer;
         $shippingAddress = $customer->addresses()->findOrFail($request->shipping_address_id);
 
-         // ADDED: Store user's phone in a temporary cookie (10 minutes)
-        // This cookie will be used to log them back in after payment.
-        //dd($user->phone);
-            
-        
-        //dd(Cookie::get('user_phone_for_login'));
         $totalAmount = ($cartData['subtotal'] - $cartData['discount']) + $request->shipping_cost;
 
         DB::beginTransaction();
@@ -270,25 +264,43 @@ $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3f
                 'cod'              => $request->payment_method == 'cod' ? $totalAmount : 0,
                 'due'              => $totalAmount,
                 'order_from'       => 'web',
-                   'currency'         => 'BDT',
+                'currency'         => 'BDT',
                 'payment_status'   => 'unpaid',
                 'notes'            => $request->notes,
             ]);
 
-            foreach ($cartData['cart'] as $item) {
+            // --- UPDATED LOOP TO FIX UNDEFINED ARRAY KEY ERROR ---
+            // We extract $key because CartController uses the Product ID as the array key.
+            foreach ($cartData['cart'] as $key => $item) {
                  if (isset($item['is_bundle']) && $item['is_bundle']) {
                     foreach ($item['selected_products'] as $bundleProduct) {
                         OrderDetail::create([
-                            'order_id' => $order->id, 'product_id' => $bundleProduct['product_id'], 'product_variant_id' => $bundleProduct['variant_id'],
-                            'color' => $bundleProduct['color'], 'size' => $bundleProduct['size'], 'quantity' => $item['quantity'],
-                            'unit_price' => $bundleProduct['price'], 'subtotal' => $bundleProduct['price'] * $item['quantity'],
+                            'order_id' => $order->id, 
+                            'product_id' => $bundleProduct['product_id'], 
+                            // Added ?? null for safety
+                            'product_variant_id' => $bundleProduct['variant_id'] ?? null,
+                            'color' => $bundleProduct['color'] ?? null, 
+                            'size' => $bundleProduct['size'] ?? null, 
+                            'quantity' => $item['quantity'],
+                            'unit_price' => $bundleProduct['price'], 
+                            'subtotal' => $bundleProduct['price'] * $item['quantity'],
                         ]);
                     }
                 } else {
+                    // HERE IS THE FIX: 
+                    // If 'product_id' is missing in the array, we use $key (which is the product ID from CartController).
+                    $productId = $item['product_id'] ?? $key;
+
                     OrderDetail::create([
-                        'order_id' => $order->id, 'product_id' => $item['product_id'], 'product_variant_id' => $item['variant_id'],
-                        'color' => $item['color'], 'size' => $item['size'], 'quantity' => $item['quantity'],
-                        'unit_price' => $item['price'], 'subtotal' => $item['price'] * $item['quantity'],
+                        'order_id' => $order->id, 
+                        'product_id' => $productId, 
+                        // Added ?? null to handle cases where these keys don't exist in the session
+                        'product_variant_id' => $item['variant_id'] ?? null,
+                        'color' => $item['color'] ?? null, 
+                        'size' => $item['size'] ?? null, 
+                        'quantity' => $item['quantity'],
+                        'unit_price' => $item['price'], 
+                        'subtotal' => $item['price'] * $item['quantity'],
                     ]);
                 }
             }
@@ -320,7 +332,6 @@ $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3f
                 $payment_options = $sslc->makePayment($post_data, 'hosted');
 
                 if (is_array($payment_options) && array_key_exists('GatewayPageURL', $payment_options)) {
-                    // Redirect the user to the payment gateway
                     return redirect($payment_options['GatewayPageURL']);
                 } else {
                     DB::rollBack();
@@ -347,17 +358,16 @@ $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3f
                 $response = $this->bkashApiCall($url, $request_data, $token);
 
                 if (isset($response['bkashURL'])) {
-                    // Store the paymentID to verify in the callback
                     $order->trxID = $response['paymentID'];
                     $order->save();
                     return redirect($response['bkashURL']);
                 }
                 
                 return redirect()->back()->with('error', $response['statusMessage'] ?? 'bKash payment creation failed.');
-            } else { // COD
+            } else { 
+                // COD
                 Session::forget('cart');
                 Session::forget('coupon');
-                // Redirect to the order success page
                 return redirect()->route('order.success', ['orderId' => $order->id])->with('success', 'Your order has been placed successfully!');
             }
 
@@ -369,7 +379,7 @@ $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3f
     }
     
   
-    // NEW BKASH CALLBACK METHOD
+    // BKASH CALLBACK
     public function bkashCallback(Request $request)
     {
         if ($request->status != 'success' || !$request->paymentID) {
@@ -395,7 +405,6 @@ $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3f
         if (isset($response['statusCode']) && $response['statusCode'] == '0000') {
             // Verify amount
             if ($response['amount'] != $order->total_amount) {
-                // You should handle this case by refunding the payment via bKash API and marking the order as failed.
                 \Log::error('bKash amount mismatch for order: '.$order->id);
                 return redirect()->route('cart.show')->with('error', 'Payment amount mismatch. Please contact support.');
             }
@@ -404,7 +413,7 @@ $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3f
             $order->update([
                 'status' => 'pending',
                 'payment_status' => 'paid',
-                'trxID' => $response['trxID'], // Store the final transaction ID
+                'trxID' => $response['trxID'],
                 'total_pay' => $response['amount'],
                 'due' => 0,
                 'cod' => 0,
@@ -423,23 +432,15 @@ $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3f
 
     public function orderSuccess($orderId)
     {
+        $phone = Cookie::get('user_phone_for_login');
 
-
-      
-           // Retrieve the cookie value from the request
-    $phone = Cookie::get('user_phone_for_login');
-
-    if ($phone) {
-        // Now you can use the phone number
-        // For example: find the user and log them in
-        $user = User::where('phone', $phone)->first();
-        if ($user) {
-            Auth::login($user);
+        if ($phone) {
+            $user = User::where('phone', $phone)->first();
+            if ($user) {
+                Auth::login($user);
+            }
         }
-    }
-
-            // Delete the cookie immediately after use for security
-            Cookie::queue(Cookie::forget('user_phone_for_login'));
+        Cookie::queue(Cookie::forget('user_phone_for_login'));
         
         $order = Order::with('customer', 'orderDetails.product')
                       ->where('id', $orderId)
@@ -450,20 +451,12 @@ $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3f
     }
 
 
-
-
-     // --- ADDED: SSLCOMMERZ CALLBACK METHODS ---
+    // --- SSLCOMMERZ CALLBACK METHODS ---
 
     public function sslSuccess(Request $request)
     {
-
-        
-
-       
         $tran_id = $request->input('tran_id');
         $order = Order::where('invoice_no', $tran_id)->first();
-//dd($tran_id);
-       
 
         if ($order) {
             $sslc = new SslCommerzNotification();
@@ -488,9 +481,6 @@ $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3f
         return redirect()->route('cart.show')->with('error', 'Payment validation failed.');
     }
 
-
-
-
     public function sslFail(Request $request)
     {
         $tran_id = $request->input('tran_id');
@@ -500,10 +490,6 @@ $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3f
         }
         return redirect()->route('cart.show')->with('error', 'Transaction is failed.');
     }
-
-
-
-
 
     public function sslCancel(Request $request)
     {
@@ -515,13 +501,8 @@ $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3f
         return redirect()->route('cart.show')->with('error', 'Transaction is cancelled.');
     }
 
-
-
-
     public function sslIpn(Request $request)
     {
-        // IPN is an important validation step for asynchronous payment updates.
-        // It's similar to the success callback but initiated by the SSLCommerz server.
         $tran_id = $request->input('tran_id');
         $order = Order::where('invoice_no', $tran_id)->where('payment_status', 'unpaid')->first();
 
@@ -536,11 +517,8 @@ $BKASH_CHECKOUT_URL_APP_SECRET ='2is7hdktrekvrbljjh44ll3d9l1dtjo4pasmjvs5vl5qr3f
                     'due' => 0,
                     'cod' => 0
                 ]);
-                // You can add notifications (email, SMS) here
                 return;
             }
         }
-        // Log IPN failure if needed
     }
 }
-
