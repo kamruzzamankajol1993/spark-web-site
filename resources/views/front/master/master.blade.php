@@ -34,7 +34,7 @@
 </head>
 
 <body>
-    @include('front.include.header')
+    @include('front.include.headerone')
 
     @yield('body')
 

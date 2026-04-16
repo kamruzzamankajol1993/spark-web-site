@@ -27,9 +27,118 @@ use App\Models\HeroSection;
 use App\Models\FlashSale;
 use App\Models\HomePageDescription;
 use Illuminate\Support\Facades\Auth; // Add this at the top
-use App\Models\Wishlist; // Add this at the top
+use App\Models\Wishlist;
+use Mpdf\Mpdf;
 class FrontController extends Controller
 {
+
+
+public function pcBuilder()
+{
+    // ১. যে মেইন ক্যাটাগরিগুলো সম্পূর্ণ বাদ যাবে
+    $excludedMainSlugs = ['laptop', 'smartphone'];
+
+    // ২. ডেক্সটপ ক্যাটাগরি খুঁজে বের করা
+    $desktopCategory = Category::where('slug', 'desktop')->first();
+    $desktopId = $desktopCategory ? $desktopCategory->id : null;
+
+    // ৩. ক্যাটাগরি ফিল্টারিং লজিক
+    $categories = Category::where('status', 1)
+        ->where(function ($query) use ($desktopId, $excludedMainSlugs) {
+            // লজিক এ: যদি কোনো ক্যাটাগরির প্যারেন্ট ডেক্সটপ হয় (যেমন: Processor, RAM)
+            if ($desktopId) {
+                $query->where('parent_id', $desktopId);
+            }
+            
+            // লজিক বি: অন্য সব মেইন ক্যাটাগরি যারা ডেক্সটপ, ল্যাপটপ বা স্মার্টফোন নয় (যেমন: Monitor, UPS)
+            $query->orWhere(function ($q) use ($excludedMainSlugs) {
+                $q->whereNull('parent_id')
+                  ->whereNotIn('slug', array_merge(['desktop'], $excludedMainSlugs));
+            });
+        })
+        ->get();
+
+    // ৪. সেশন থেকে ডাটা নেওয়া
+    $selectedComponents = session()->get('pc_builder', []);
+    
+    return view('front.pc_builder.index', compact('categories', 'selectedComponents'));
+}
+
+public function removeComponent($id)
+{
+    $pcBuilder = session()->get('pc_builder', []);
+    if(isset($pcBuilder[$id])) {
+        unset($pcBuilder[$id]);
+        session()->put('pc_builder', $pcBuilder);
+    }
+    return redirect()->back()->with('success', 'Component removed!');
+}
+
+public function chooseComponent($slug)
+{
+    $category = Category::where('slug', $slug)->firstOrFail();
+    
+    // এই ক্যাটাগরির প্রোডাক্টগুলো ফিল্টার করে দেখানোর জন্য
+    $products = Product::whereHas('category', function($q) use ($category) {
+        $q->where('category_id', $category->id);
+    })->where('status', 1)->paginate(12);
+
+    return view('front.pc_builder.choose', compact('category', 'products'));
+}
+
+public function addComponent(Request $request, $id)
+{
+    $product = Product::with('category')->findOrFail($id);
+    
+    // প্রোডাক্টের ক্যাটাগরি আইডি নেওয়া (এটি সাব-ক্যাটাগরি বা মেইন ক্যাটাগরি হতে পারে)
+    $categoryId = $product->category_id;
+    
+    // অফার প্রাইস থাকলে সেটি নেওয়া, না থাকলে রেগুলার সেলিং প্রাইস
+    $price = $product->offer_price > 0 ? $product->offer_price : $product->selling_price;
+
+    // সেশন থেকে বর্তমান বিল্ডার ডাটা নেওয়া
+    $pcBuilder = session()->get('pc_builder', []);
+
+    // একই ক্যাটাগরিতে প্রোডাক্ট অ্যাড করা (আগের ডাটা থাকলে তা অটো রিপ্লেস হবে)
+    $pcBuilder[$categoryId] = [
+        "id" => $product->id,
+        "name" => $product->name,
+        "price" => $price,
+        "category_name" => $product->category->name,
+        "image" => $product->images->first()->image_path ?? ''
+    ];
+
+    // সেশনে সেভ করা
+    session()->put('pc_builder', $pcBuilder);
+
+    return redirect()->route('pc_builder.index')->with('success', 'Component added to builder!');
+}
+
+public function clearPcBuilder()
+{
+    // সেশন থেকে পিসি বিল্ডারের সব ডাটা রিমুভ করা
+    session()->forget('pc_builder');
+
+    return redirect()->route('pc_builder.index')->with('success', 'All components have been cleared!');
+}
+
+public function downloadPdf()
+{
+    $selectedComponents = session()->get('pc_builder', []);
+    if (empty($selectedComponents)) {
+        return redirect()->back()->with('error', 'No components selected!');
+    }
+
+    $html = view('front.pc_builder.pdf', compact('selectedComponents'))->render();
+
+    $mpdf = new \Mpdf\Mpdf([
+        'format' => 'A4',
+        'default_font' => 'nikosh' // বাংলা ফন্ট সাপোর্ট দিলে নিকোশ ইউজ করতে পারেন
+    ]);
+    
+    $mpdf->WriteHTML($html);
+    return $mpdf->Output('PC-Build-Spark-Tech.pdf', 'I');
+}
 
 public function getHeaderCounts()
 {
@@ -782,6 +891,12 @@ public function filterProducts(Request $request)
     $sizes = Size::where('status', 1)->get();
 
     return view('front.category.subcategory', compact('subcategory', 'category', 'products', 'categoryList', 'sizes'));
+}
+
+
+public function pc_builder(){
+
+   return view('front.pcbuilder');
 }
 
 

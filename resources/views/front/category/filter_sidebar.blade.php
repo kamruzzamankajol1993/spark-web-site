@@ -56,7 +56,7 @@
 
     <hr>
 
-    <h5 class="fw-bold my-3 filter_title">Filter by Price</h5>
+    <h5 class="fw-bold my-3 filter_title">hhFilter by Price</h5>
     <div class="range-slider-container mb-3">
         <input type="range" class="form-range" id="min-price-slider" min="0" max="10000" value="0">
         <input type="range" class="form-range" id="max-price-slider" min="0" max="10000" value="10000">

@@ -61,19 +61,10 @@ p {
 /*--------------------------------------------------------------
 # Global Header
 --------------------------------------------------------------*/
-
 .header-section {
-  background: #4c657e; /* fallback for old browsers */
-  background: -webkit-linear-gradient(
-    to right,
-    #3498db,
-    #4c657e
-  ); /* Chrome 10-25, Safari 5.1-6 */
-  background: linear-gradient(
-    to right,
-    #3498db,
-    #4c657e
-  ); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+  background: #4c657e;
+  background: -webkit-linear-gradient(to right, #3498db, #4c657e);
+  background: linear-gradient(to right, #3498db, #4c657e);
 }
 
 .spark_logo {
@@ -86,13 +77,13 @@ p {
 }
 
 .header-top {
-  border-bottom: 1px solid #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
   padding-top: 5px;
   padding-bottom: 5px;
 }
 
 .header-bottom {
-  border-top: 1px solid #ffffff;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
   padding-top: 5px;
   padding-bottom: 5px;
 }
@@ -128,7 +119,7 @@ p {
 }
 
 .category-button:hover {
-  background-color: var(--button-bg-color);
+  background-color: black;
   color: white;
 }
 
@@ -137,7 +128,6 @@ p {
   color: #333;
   border: none;
   border-radius: 0;
-  padding-left: 1rem;
 }
 
 .form-control-search:focus {
@@ -152,12 +142,6 @@ p {
   display: flex;
   align-items: center;
   padding: 0.5rem 1rem;
-}
-
-.search-btn:hover {
-  background-color: var(--button-bg-color);
-  border: none;
-  color: white;
 }
 
 .icon-btn {
@@ -177,51 +161,112 @@ p {
   color: white;
   border-radius: 50%;
   font-size: 0.75rem;
-  padding: 0.1rem 0.4rem;
-  line-height: 1;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
+  line-height: 1;
 }
 
 .nav-link-list a {
   color: rgb(255, 255, 255);
   transition: color 0.2s;
   font-size: 14px;
-  padding: 0.5rem 0.4rem; /* Reduced padding for tighter spacing */
+  padding: 0.5rem 0.4rem;
+  text-decoration: none;
 }
 
 .nav-link-list a:hover {
-  color: rgb(253, 253, 253);
+  color: white;
 }
 
-/* Sub-header hover effect */
+/* --- Updated Dropdown Logic --- */
+.dropdown {
+  position: relative;
+}
+
+/* Show menu on hover for desktop */
+@media (min-width: 992px) {
+  .dropdown:hover > .dropdown-menu-custom {
+    display: block;
+    margin-top: 0; /* Align with bottom of header */
+  }
+  .dropdown-submenu:hover > .dropdown-menu {
+    display: block;
+  }
+}
+
 .dropdown-item {
   color: black !important;
+  padding: 8px 20px;
 }
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
 .dropdown-menu-custom {
   display: none;
   position: absolute;
-  z-index: 1000;
+  z-index: 1001;
   border-radius: 0;
-}
-.dropdown:hover > .dropdown-menu-custom {
-  display: block;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  border: none;
+  min-width: 200px;
 }
 
-/* Sub-sub-menu styles */
 .dropdown-submenu {
   position: relative;
 }
 .dropdown-submenu > .dropdown-menu {
   top: 0;
   left: 100%;
-  margin-top: -6px;
-  margin-left: -1px;
+  margin-top: 0;
+  margin-left: 0;
   display: none;
+  border-radius: 0;
+  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
 }
-.dropdown-submenu:hover > .dropdown-menu {
-  display: block;
+
+/* Mobile App Styles */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  height: 65px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1050;
+  border-top: 1px solid #eee;
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: #555;
+  font-size: 11px;
+  border: none;
+  background: transparent;
+  flex: 1;
+}
+
+.bottom-nav-item i {
+  font-size: 20px;
+  margin-bottom: 2px;
+}
+.bottom-nav-item:active {
+  color: var(--spark-blue);
+}
+
+.offcanvas-top-search {
+  height: 80px !important;
+  border-bottom: 1px solid #ddd;
 }
 
 /* Offcanvas Styles */
@@ -1705,1076 +1750,254 @@ p {
   }
 }
 
-/* user profile design */
-
-.spotlight_user_profile_container {
-    margin: 0 auto;
-}
-
-.spotlight_user_profile_breadcrumb {
-    margin-bottom: 20px;
-    font-size: 0.9em;
-    color: #6c757d;
-}
-
-.spotlight_user_profile_main-content {
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    padding: 30px;
-    min-height: 70vh;
-}
-
-.spotlight_user_profile_sidebar {
-    background-color: #fff;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.spotlight_user_profile_sidebar-header {
-    display: flex;
-    align-items: center;
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-    margin-bottom: 20px;
-}
-
-.spotlight_user_profile_user-avatar-container {
-    position: relative;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background-color: #e9ecef;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.spotlight_user_profile_user-avatar-container i {
-    font-size: 2.5em;
-    color: #adb5bd;
-}
-
-.spotlight_user_profile_user-info {
-    margin-left: 15px;
-}
-
-.spotlight_user_profile_user-name {
-    font-size: 1.1em;
-    font-weight: 600;
-}
-
-.spotlight_user_profile_user-cash {
-    font-size: 0.9em;
-    color: #28a745;
-}
-
-.spotlight_user_profile_view-profile-link {
-    font-size: 0.8em;
-    color: #007bff;
-    text-decoration: none;
-}
-
-.spotlight_user_profile_nav-list .list-group-item {
-    border: none;
-    border-radius: 8px;
-    margin-bottom: 5px;
-    transition: background-color 0.2s;
-    cursor: pointer;
-}
-
-.spotlight_user_profile_nav-list .list-group-item:hover,
-.spotlight_user_profile_nav-list .list-group-item.active {
-    background-color: #e9ecef;
-    font-weight: 500;
-}
-
-.spotlight_user_profile_nav-list .list-group-item i {
-    margin-right: 10px;
-}
-
-.spotlight_user_profile_nav-list .list-group-item.active {
-    color: #000;
-}
-
-.spotlight_user_profile_profile-header {
-    border-bottom: 1px solid #eee;
-    padding-bottom: 20px;
-    margin-bottom: 30px;
-}
-
-.spotlight_user_profile_profile-header h4 {
-    font-weight: 600;
-}
-
-.spotlight_user_profile_profile-picture-section {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 30px;
-}
-
-.spotlight_user_profile_profile-picture {
-    position: relative;
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    background-color: #e9ecef;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.spotlight_user_profile_profile-picture i {
-    font-size: 4em;
-    color: #adb5bd;
-}
-
-.spotlight_user_profile_camera-icon {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    background-color: #007bff;
-    color: #fff;
-    border-radius: 50%;
-    width: 35px;
-    height: 35px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    border: 2px solid white;
-}
-
-.spotlight_user_profile_camera-icon i {
-    font-size: 1.2em;
-    color: #fff;
-}
-
-.spotlight_user_profile_form-label {
-    font-size: 0.9em;
-    font-weight: 500;
-    color: #333;
-}
-
-.spotlight_user_profile_form-control {
-    border-radius: 8px;
-    padding: 10px;
-    border: 1px solid #ddd;
-}
-
-.spotlight_user_profile_form-control:focus {
-    border-color: #3498db;
-    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
-}
-
-.spotlight_user_profile_input-group-text {
-    background-color: #e9ecef;
-    border: 1px solid #ddd;
-    border-radius: 8px 0 0 8px;
-}
-
-.spotlight_user_profile_update-btn {
-    background-color: #008080;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 8px;
-    border: none;
-    font-weight: 600;
-    transition: background-color 0.2s;
-    width: 100%;
-}
-
-.spotlight_user_profile_update-btn:hover {
-    background-color: #006666;
-}
-
-.spotlight_user_profile_main-header {
-    border-bottom: 1px solid #eee;
-    padding-bottom: 20px;
-    margin-bottom: 30px;
-}
-
-.spotlight_user_profile_main-header h4 {
-    font-weight: 600;
-}
-
-.spotlight_user_profile_filter-tabs .btn {
-    border-radius: 20px;
-    padding: 8px 18px;
-    margin-right: 10px;
-    font-size: 0.9em;
-    font-weight: 500;
-}
-
-.spotlight_user_profile_filter-tabs .btn.active {
-    background-color: #000;
-    color: #fff;
-}
-
-.spotlight_user_profile_order-card {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 20px;
-    margin-top: 20px;
-    background-color: #fff;
-}
-
-.spotlight_user_profile_order-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px dashed #ddd;
-    padding-bottom: 15px;
-    margin-bottom: 15px;
-}
-
-.spotlight_user_profile_order-id {
-    font-weight: 600;
-}
-
-.spotlight_user_profile_order-delivery {
-    font-size: 0.8em;
-    color: #6c757d;
-}
-
-.spotlight_user_profile_order-info {
-    display: flex;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-.spotlight_user_profile_order-info i {
-    font-size: 1.5em;
-    margin-right: 10px;
-    color: #3498db;
-}
-
-.spotlight_user_profile_order-details {
-    font-size: 0.9em;
-}
-
-.spotlight_user_profile_order-name {
-    font-weight: 600;
-}
-
-.spotlight_user_profile_order-date {
-    font-size: 0.8em;
-    color: #6c757d;
-    text-align: right;
-}
-
-.spotlight_user_profile_order-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 15px;
-    border-top: 1px dashed #ddd;
-    margin-top: 15px;
-}
-
-.spotlight_user_profile_amount {
-    font-weight: 700;
-}
-
-.spotlight_user_profile_status {
-    font-size: 0.9em;
-    font-weight: 600;
-    padding: 5px 10px;
-    border-radius: 5px;
-    text-transform: uppercase;
-}
-
-.spotlight_user_profile_status.delivered {
-    background-color: #d4edda;
-    color: #155724;
-}
-
-.spotlight_user_profile_btn {
-    padding: 8px 15px;
-    border-radius: 8px;
-    font-weight: 500;
-    font-size: 0.9em;
-}
-
-.spotlight_user_profile_btn-primary {
-    background-color: #007bff;
-    color: #fff;
-    border: 1px solid #007bff;
-}
-
-.spotlight_user_profile_btn-secondary {
-    background-color: #6c757d;
-    color: #fff;
-    border: 1px solid #6c757d;
-}
-
-
-/* Media Queries for Responsiveness */
-
-@media (max-width: 768px) {
-    .spotlight_user_profile_sidebar {
-        margin-bottom: 20px;
-    }
-    .spotlight_user_profile_filter-tabs {
-        display: flex;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-    .spotlight_user_profile_filter-tabs .btn {
-        flex: 0 0 auto;
-    }
-}
-
-.spotlight_user_profile_order-details-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.spotlight_user_profile_order-details-header a {
-    font-size: 0.9em;
-    text-decoration: none;
-}
-
-.spotlight_user_profile_order-details-header a:hover {
-    text-decoration: underline;
-}
-
-.spotlight_user_profile_timeline {
-    position: relative;
-}
-
-.spotlight_user_profile_timeline::before {
-    content: '';
-    position: absolute;
-    left: 110px;
-    top: 0;
-    height: 100%;
-    width: 2px;
-    background-color: #ddd;
-}
-
-.spotlight_user_profile_timeline-item {
-    position: relative;
-    margin-bottom: 30px;
-    padding-left: 150px;
-}
-
-.spotlight_user_profile_timeline-date {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100px;
-    text-align: right;
-    font-size: 0.9em;
-    color: #888;
-}
-
-.spotlight_user_profile_timeline-icon {
-    position: absolute;
-    left: 102px;
-    top: 0;
-    width: 16px;
-    height: 16px;
-    background-color: #3498db;
-    border: 2px solid #fff;
-    border-radius: 50%;
-}
-
-.spotlight_user_profile_timeline-icon.active {
-    background-color: #28a745;
-}
-
-.spotlight_user_profile_timeline-content h5 {
-    font-weight: 600;
-    font-size: 1.1em;
-    margin-bottom: 5px;
-    color: black;
-}
-
-.spotlight_user_profile_timeline-content p {
-    font-size: 0.9em;
-    color: #555;
-}
-
-.spotlight_user_profile_section-card {
-    background-color: #f8f9fa;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-.spotlight_user_profile_product-list .list-group-item {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    margin-bottom: 10px;
-}
-
-.spotlight_user_profile_product-item {
-    display: flex;
-    align-items: center;
-}
-
-.spotlight_user_profile_product-item img {
-    width: 60px;
-    height: 60px;
-    border-radius: 8px;
-    margin-right: 15px;
-}
-
-.spotlight_user_profile_shipping-address {
-    background-color: #f8f9fa;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 20px;
-}
-
-.spotlight_user_profile_summary-table td,
-.spotlight_user_profile_summary-table th {
-    padding: 8px 0;
-    border: none;
-}
-
-.spotlight_user_profile_summary-table .text-success {
-    font-weight: 500;
-}
-
-.spotlight_user_profile_download-btn {
-    background-color: #008080;
-    color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
-    border: none;
-    font-weight: 600;
-    transition: background-color 0.2s;
-    width: 100%;
-}
-
-.spotlight_user_profile_download-btn:hover {
-    background-color: #006666;
-}
-
-
-/* Media Queries for Responsiveness */
-
-@media (max-width: 768px) {
-    .spotlight_user_profile_sidebar {
-        margin-bottom: 20px;
-    }
-    .spotlight_user_profile_timeline {
-        padding-left: 20px;
-    }
-    .spotlight_user_profile_timeline::before {
-        left: 10px;
-    }
-    .spotlight_user_profile_timeline-item {
-        padding-left: 30px;
-        margin-bottom: 20px;
-    }
-    .spotlight_user_profile_timeline-date {
-        position: relative;
-        left: 0;
-        width: auto;
-        text-align: left;
-        margin-bottom: 5px;
-    }
-    .spotlight_user_profile_timeline-icon {
-        left: 2px;
-    }
-    .spotlight_user_profile_order-details-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-}
-
-.spotlight_user_profile_wishlist-card {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-.spotlight_user_profile_wishlist-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.spotlight_user_profile_product-info {
-    display: flex;
-    align-items: center;
-}
-
-.spotlight_user_profile_product-info img {
-    width: 80px;
-    height: 80px;
-    border-radius: 8px;
-    margin-right: 15px;
-    position: relative;
-}
-
-.spotlight_user_profile_product-details {
-    display: flex;
-    flex-direction: column;
-}
-
-.spotlight_user_profile_product-details p {
-    margin: 0;
-    font-weight: 500;
-}
-
-.spotlight_user_profile_product-details small {
-    color: #777;
-}
-
-.spotlight_user_profile_product-price {
-    display: flex;
-    align-items: center;
-    font-size: 1.1em;
-    font-weight: 600;
-}
-
-.spotlight_user_profile_original-price {
-    color: #888;
-    text-decoration: line-through;
-    font-size: 0.8em;
-    font-weight: 400;
-    margin-left: 10px;
-}
-
-.spotlight_user_profile_add-to-cart-btn {
-    background-color: #008080;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 8px;
-}
-
-.spotlight_user_profile_wishlist-actions .btn {
-    margin-left: 10px;
-}
-
-.spotlight_user_profile_badge {
-    position: absolute;
-    top: 5px;
-    left: 5px;
-    background-color: #008080;
-    color: white;
-    font-size: 0.7em;
-    padding: 4px 8px;
-    border-radius: 5px;
-    z-index: 10;
-}
-
-.spotlight_user_profile_delivery-badge {
-    background-color: #f0ad4e;
-    color: white;
-    font-size: 0.8em;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-weight: 500;
-    margin-top: 5px;
-}
-
-.spotlight_user_profile_wishlist-card {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-.spotlight_user_profile_wishlist-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.spotlight_user_profile_product-info {
-    display: flex;
-    align-items: center;
-}
-
-.spotlight_user_profile_product-info img {
-    width: 80px;
-    height: 80px;
-    border-radius: 8px;
-    margin-right: 15px;
-    position: relative;
-}
-
-.spotlight_user_profile_product-details {
-    display: flex;
-    flex-direction: column;
-}
-
-.spotlight_user_profile_product-details p {
-    margin: 0;
-    font-weight: 500;
-}
-
-.spotlight_user_profile_product-details small {
-    color: #777;
-}
-
-.spotlight_user_profile_product-price {
-    display: flex;
-    align-items: center;
-    font-size: 1.1em;
-    font-weight: 600;
-}
-
-.spotlight_user_profile_original-price {
-    color: #888;
-    text-decoration: line-through;
-    font-size: 0.8em;
-    font-weight: 400;
-    margin-left: 10px;
-}
-
-.spotlight_user_profile_add-to-cart-btn {
-    background-color: #008080;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 8px;
-}
-
-.spotlight_user_profile_wishlist-actions .btn {
-    margin-left: 10px;
-}
-
-.spotlight_user_profile_badge {
-    position: absolute;
-    top: 5px;
-    left: 5px;
-    background-color: #008080;
-    color: white;
-    font-size: 0.7em;
-    padding: 4px 8px;
-    border-radius: 5px;
-    z-index: 10;
-}
-
-.spotlight_user_profile_delivery-badge {
-    background-color: #f0ad4e;
-    color: white;
-    font-size: 0.8em;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-weight: 500;
-    margin-top: 5px;
-}
-
 /*--------------------------------------------------------------
-# Cart Page
+# PC Build Page
 --------------------------------------------------------------*/
 
-.spotlight_cart_progress_header {
-    background-color: #007bff;
-    color: white;
-    padding: 1rem 0;
+.spark_pcbuild_main_wrapper {
+  max-width: 100%;
+  margin: 0 auto;
+  background: #fff;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.spotlight_cart_progress_item {
-    display: flex;
-    align-items: center;
+/* Top Header */
+.spark_pcbuild_builder_header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e1e5ee;
+  margin-bottom: 20px;
 }
 
-.spotlight_cart_progress_item:not(:last-child)::after {
-    content: "→";
-    margin: 0 1rem;
-    font-size: 1.25rem;
-    opacity: 0.5;
+.spark_pcbuild_title_area h1 {
+  font-size: 22px;
+  color: #3749bb;
+  margin: 0 0 10px 0;
 }
 
-.spotlight_cart_container {
-    max-width: 1400px;
-    margin-top: 2rem;
+.spark_pcbuild_checkbox_control {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  color: #444;
 }
 
-.spotlight_cart_summary_card {
-    background-color: white;
-    border-radius: 0.5rem;
-    padding: 1.5rem;
+.spark_pcbuild_checkbox_control input {
+  margin-right: 8px;
 }
 
-.spotlight_cart_item {
-    display: flex;
-    align-items: center;
-    border-bottom: 1px solid #dee2e6;
-    padding: 1rem 0;
+.spark_pcbuild_stats_area {
+  display: flex;
+  gap: 15px;
+  align-items: center;
 }
 
-.spotlight_cart_item_image {
-    width: 100px;
-    height: 100px;
-    object-fit: contain;
-    border: 1px solid #dee2e6;
-    border-radius: 0.5rem;
+/* PDF Download Button Styling */
+.spark_pcbuild_btn_pdf {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #e74c3c;
+  background: #fff;
+  color: #e74c3c;
+  padding: 8px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: 0.3s;
+  min-width: 120px;
+  text-decoration: none;
 }
 
-.spotlight_cart_item_details {
-    flex-grow: 1;
+.spark_pcbuild_btn_pdf:hover {
+  background: #e74c3c;
+  color: #fff;
 }
 
-.spotlight_cart_item_quantity {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border: 1px solid #dee2e6;
-    border-radius: 0.25rem;
-    overflow: hidden;
+.spark_pcbuild_btn_pdf i {
+  font-size: 20px;
+  margin-bottom: 4px;
 }
 
-.spotlight_cart_item_quantity button {
-    background: #f8f9fa;
-    border: none;
-    padding: 0.25rem 0.75rem;
+.spark_pcbuild_btn_pdf span {
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
 }
 
-.spotlight_cart_total_row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem 0;
+.spark_pcbuild_summary_box {
+  background: #3749bb;
+  color: #fff;
+  padding: 5px 25px;
+  border-radius: 4px;
+  text-align: center;
+  min-width: 120px;
+  height: 54px; /* Matches height of PDF button roughly */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.spotlight_cart_action_button {
-    width: 100%;
-    padding: 0.75rem;
-    font-weight: 600;
+.spark_pcbuild_total_price {
+  display: block;
+  font-weight: bold;
+  font-size: 18px;
+}
+.spark_pcbuild_total_items {
+  font-size: 10px;
+  opacity: 0.8;
+  font-weight: bold;
 }
 
-.spotlight_cart_interest_card {
-    background-color: white;
-    border-radius: 0.5rem;
-    padding: 1.5rem;
-    margin-top: 2rem;
+/* Section Separators */
+.spark_pcbuild_section_bar {
+  background: #262729;
+  color: #fff;
+  padding: 8px 15px;
+  font-size: 13px;
+  font-weight: bold;
+  margin: 20px 0 10px 0;
 }
 
-.spotlight_cart_accordion_item {
-    border: 1px solid #dee2e6;
-    border-radius: 0.5rem;
-    overflow: hidden;
-    margin-bottom: 0.5rem;
+/* Component Row */
+.spark_pcbuild_component_row {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #e1e5ee;
+  gap: 20px;
 }
 
-
-/* Table specific styles for responsiveness */
-
-.spotlight_cart_table {
-    width: 100%;
-    border-collapse: collapse;
+.spark_pcbuild_icon_col {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #3749bb;
+  background: #f8f9fa;
 }
 
-.spotlight_cart_table th,
-.spotlight_cart_table td {
-    padding: 1rem;
-    border-bottom: 1px solid #dee2e6;
-    vertical-align: middle;
+.spark_pcbuild_img_selected {
+  width: 45px;
+  height: 45px;
+  object-fit: contain;
 }
 
-.spotlight_cart_table th {
-    text-align: center;
-    font-weight: 600;
-    color: #6c757d;
+.spark_pcbuild_info_col {
+  flex-grow: 1;
 }
 
-.spotlight_cart_table td {
-    text-align: center;
+.spark_pcbuild_category_name {
+  font-size: 18px;
+  color: #272626;
+  font-weight: bold;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
-.spotlight_cart_table_row:first-child .spotlight_cart_table_cell:first-child {
-    width: 50%;
+.spark_pcbuild_badge_required {
+  background: #666;
+  color: #fff;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-weight: bold;
 }
 
-.spotlight_cart_nested_item td {
-    padding: 0.5rem;
-    border-top: none;
+.spark_pcbuild_placeholder_line {
+  height: 4px;
+  background: #f0f0f0;
+  width: 80%;
+  margin-top: 8px;
 }
 
-.spotlight_cart_nested_item_image {
-    width: 50px;
-    /* Smaller image size for nested items */
-    height: 50px;
-    object-fit: contain;
-    border: 1px solid #dee2e6;
-    border-radius: 0.25rem;
+.spark_pcbuild_product_name {
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 5px;
+  color: #333;
 }
 
-.spotlight_cart_nested_item .spotlight_cart_item_details {
-    display: flex;
-    align-items: center;
+.spark_pcbuild_product_specs {
+  font-size: 11px;
+  color: #f57c00;
+  margin-top: 3px;
 }
 
-.spotlight_cart_nested_item .spotlight_cart_item_details h6 {
-    font-size: 0.9rem;
-    margin-left: 0.5rem;
+.spark_pcbuild_price_col {
+  width: 100px;
+  text-align: right;
+  font-weight: bold;
+  font-size: 15px;
 }
 
-.cart_subtotal
-{
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.spark_pcbuild_action_col {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  padding-left: 20px;
 }
 
-@media (max-width: 767.98px) {
-    .spotlight_cart_table thead {
-        display: none;
-    }
-
-    .main-cart-item
-    {
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-        margin-bottom: 15px;
-        padding-bottom: 15px;
-        border-bottom: 1px solid var(--brdcolor-gray-300);
-    }
-    .spotlight_cart_table,
-    .spotlight_cart_table tbody,
-    .spotlight_cart_table tr,
-    .spotlight_cart_table td {
-        display: block;
-        width: 100%;
-    }
-    .spotlight_cart_table tr {
-        border-bottom: 1px solid #dee2e6;
-        margin-bottom: 1rem;
-    }
-    .spotlight_cart_table td {
-        text-align: right;
-        position: relative;
-        padding-left: 40%;
-        padding-top: 8px;
-        padding-bottom: 8px;
-        border: 0px;
-        display:flex;
-        align-items: center;
-    }
-    .spotlight_cart_table td::before {
-        content: attr(data-label);
-        position: absolute;
-        left: 1rem;
-        width: 45%;
-        padding-right: 1rem;
-        white-space: nowrap;
-        text-align: left;
-        font-weight: 600;
-    }
-    .main-cart-item td:is(.cart_product)::before {
-        content: none;
-    }
-    .main-cart-item td:is(.cart_product) {
-        padding-left: 0px;
-    }
+.spark_pcbuild_btn_choose {
+  border: 1px solid black;
+  background: transparent;
+  color: black;
+  padding: 8px 25px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 13px;
+  cursor: pointer;
+  transition: 0.2s;
 }
 
-
-/* Checkout page */
-
-.spotlight_checkout_container {
-    margin: 0 auto;
-    background-color: white;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+.spark_pcbuild_btn_choose:hover {
+  background: black;
+  color: #fff;
 }
 
-.spotlight_checkout_coupon-link {
-    text-align: center;
-    margin-bottom: 20px;
-    font-size: 0.9em;
+.spark_pcbuild_icon_action {
+  color: #888;
+  cursor: pointer;
+  font-size: 18px;
 }
 
-.spotlight_checkout_coupon-link a {
-    color: #3498db;
-    text-decoration: none;
-    font-weight: 500;
+.spark_pcbuild_icon_action:hover {
+  color: #333;
 }
 
-.spotlight_checkout_coupon-link a:hover {
-    text-decoration: underline;
-}
-
-.spotlight_checkout_section-title {
-    font-size: 1.5em;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 20px;
-}
-
-.spotlight_checkout_form-group {
-    margin-bottom: 20px;
-}
-
-.spotlight_checkout_form-control {
-    border-radius: 8px;
-    padding: 10px;
-    border: 1px solid #ddd;
-}
-
-.spotlight_checkout_form-control:focus {
-    border-color: #3498db;
-    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
-}
-
-.spotlight_checkout_order-summary {
-    background-color: #fafafa;
-    padding: 20px;
-    border-radius: 8px;
-    height: 100%;
-}
-
-.spotlight_checkout_order-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 15px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #eee;
-}
-
-.spotlight_checkout_order-item img {
-    width: 70px;
-    height: 70px;
-    border-radius: 8px;
-    margin-right: 15px;
-}
-
-.spotlight_checkout_item-details {
-    flex-grow: 1;
-}
-
-.spotlight_checkout_item-name {
-    font-weight: 500;
-    margin-bottom: 5px;
-}
-
-.spotlight_checkout_item-price,
-.spotlight_checkout_subtotal,
-.spotlight_checkout_shipping-price,
-.spotlight_checkout_total-price {
-    font-weight: 600;
-    color: #333;
-}
-
-.spotlight_checkout_subtotal,
-.spotlight_checkout_shipping,
-.spotlight_checkout_total {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-    border-top: 1px solid #eee;
-}
-
-.spotlight_checkout_total {
-    font-size: 1.25em;
-    font-weight: 700;
-    margin-top: 10px;
-    border-top: 2px solid #333;
-}
-
-.spotlight_checkout_shipping-options {
-    display: flex;
-    flex-direction: column;
-    margin-top: 5px;
-}
-
-.spotlight_checkout_shipping-option {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.9em;
-    color: #555;
-    margin-bottom: 5px;
-}
-
-.spotlight_checkout_radio-label {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-}
-
-.spotlight_checkout_radio-label input {
-    margin-right: 5px;
-}
-
-.spotlight_checkout_cash-on-delivery {
-    margin-top: 20px;
-    padding: 15px;
-    background-color: #f0f0f0;
-    border-radius: 8px;
-}
-
-.spotlight_checkout_cash-on-delivery h5 {
-    font-size: 1em;
-    font-weight: 600;
-    margin-bottom: 10px;
-    color: black;
-}
-
-.spotlight_checkout_cash-on-delivery ul {
-    list-style-type: disc;
-    padding-left: 20px;
-    font-size: 0.9em;
-}
-
-.spotlight_checkout_privacy-text {
-    font-size: 0.8em;
-    color: #777;
-    margin-top: 20px;
-    text-align: center;
-}
-
-.spotlight_checkout_place-order-btn {
-    width: 100%;
-    padding: 15px;
-    margin-top: 20px;
-    background-color: #000;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    transition: background-color 0.2s;
-}
-
-.spotlight_checkout_place-order-btn:hover {
-    background-color: #333;
-}
-
-.spotlight_checkout_change-address {
-    font-size: 0.8em;
-    color: #3498db;
-    text-decoration: none;
-}
-
-.spotlight_checkout_change-address:hover {
-    text-decoration: underline;
-}
-
-
-/* Media Queries for Responsiveness */
-
+/* Responsive */
 @media (max-width: 768px) {
-    .spotlight_checkout_container {
-        padding: 15px;
-    }
-    .spotlight_checkout_section-title {
-        font-size: 1.2em;
-    }
-    .spotlight_checkout_order-summary {
-        margin-top: 30px;
-    }
+  .spark_pcbuild_title_area h1 {
+    font-size: 18px;
+  }
+  .spark_pcbuild_builder_header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  .spark_pcbuild_stats_area {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .spark_pcbuild_component_row {
+    flex-wrap: wrap;
+  }
+  .spark_pcbuild_price_col {
+    order: 3;
+    width: 50%;
+    text-align: left;
+    margin-top: 10px;
+  }
+  .spark_pcbuild_action_col {
+    order: 4;
+    width: auto;
+    margin-top: 10px;
+  }
 }

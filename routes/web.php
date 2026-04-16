@@ -137,10 +137,15 @@ Route::controller(FrontController::class)->group(function () {
     Route::get('/bundle-view-count/{id}', [FrontController::class, 'getBundleViewCount'])->name('bundle.view_count');
 Route::get('/product-view-count/{id}', 'getProductViewCount')->name('product.view_count');
     //  Route::get('/products/ajax-search-filter', 'ajaxSearchFilter')->name('products.ajax_search_filter');
-
+Route::get('/pc-builder', 'pcBuilder')->name('pc_builder.index');
+    Route::get('/pc-builder/choose/{slug}', 'chooseComponent')->name('pc_builder.choose');
+    Route::post('/pc-builder/add/{id}', 'addComponent')->name('pc_builder.add');
+    Route::get('/pc-builder/download', 'downloadPdf')->name('pc_builder.pdf');
     Route::get('/products/ajax-search', 'ajaxSearch')->name('products.ajax_search');
     Route::get('/product-search', 'productSearch')->name('products.search');
-
+Route::get('/pc-builder-remove/{id}', [FrontController::class, 'removeComponent'])->name('pc_builder.remove');
+    //Route::get('/pc_builder', 'pc_builder')->name('pc_builder');
+Route::get('/pc-builder-clear', [FrontController::class, 'clearPcBuilder'])->name('pc_builder.clear');
     Route::get('/', 'index')->name('home.index');
 Route::get('/offers', 'offers')->name('offers');
       Route::get('/discount-filter', 'ajaxDiscountFilter')->name('discount.ajax_filter');
